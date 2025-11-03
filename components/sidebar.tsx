@@ -2,8 +2,18 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import { useState } from "react"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/contexts/auth-context"
+import { useIsMobile } from "@/hooks/use-mobile"
+import { Button } from "@/components/ui/button"
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet"
 import {
   FaUsers,
   FaUserFriends,
@@ -18,6 +28,7 @@ import {
   FaStore,
   FaComments,
   FaHospital,
+  FaBars,
 } from "react-icons/fa"
 
 const menuItems = [
@@ -35,14 +46,14 @@ const menuItems = [
   { href: "/dashboard/admin", label: "Admin", icon: FaUserShield, adminOnly: true },
 ]
 
-export function Sidebar() {
+function SidebarContent({ onLinkClick }: { onLinkClick?: () => void }) {
   const pathname = usePathname()
   const { user } = useAuth()
 
   return (
-    <aside className="w-64 bg-sidebar border-r border-sidebar-border flex flex-col h-screen sticky top-0">
+    <>
       <div className="p-6 border-b border-sidebar-border">
-        <Link href="/dashboard" className="flex items-center gap-3">
+        <Link href="/dashboard" className="flex items-center gap-3" onClick={onLinkClick}>
           <div className="bg-sidebar-primary text-sidebar-primary-foreground p-2 rounded-lg">
             <FaPaw className="w-6 h-6" />
           </div>
@@ -64,6 +75,7 @@ export function Sidebar() {
             <Link
               key={item.href}
               href={item.href}
+              onClick={onLinkClick}
               className={cn(
                 "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
                 isActive
@@ -77,6 +89,32 @@ export function Sidebar() {
           )
         })}
       </nav>
+    </>
+  )
+}
+
+export function Sidebar() {
+  const isMobile = useIsMobile()
+  const [open, setOpen] = useState(false)
+
+  if (isMobile) {
+    return (
+      <Sheet open={open} onOpenChange={setOpen}>
+        <SheetTrigger asChild>
+          <Button variant="ghost" size="icon" className="md:hidden">
+            <FaBars className="h-5 w-5" />
+          </Button>
+        </SheetTrigger>
+        <SheetContent side="left" className="w-64 p-0 bg-sidebar border-sidebar-border">
+          <SidebarContent onLinkClick={() => setOpen(false)} />
+        </SheetContent>
+      </Sheet>
+    )
+  }
+
+  return (
+    <aside className="hidden md:flex w-64 bg-sidebar border-r border-sidebar-border flex-col h-screen sticky top-0">
+      <SidebarContent />
     </aside>
   )
 }
