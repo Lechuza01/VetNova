@@ -1,5 +1,6 @@
 "use client"
 
+import React from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useState } from "react"
@@ -93,28 +94,51 @@ function SidebarContent({ onLinkClick }: { onLinkClick?: () => void }) {
   )
 }
 
+// Context para compartir el estado del sidebar móvil
+const SidebarContext = React.createContext<{
+  open: boolean
+  setOpen: (open: boolean) => void
+}>({
+  open: false,
+  setOpen: () => {},
+})
+
+export function SidebarProvider({ children }: { children: React.ReactNode }) {
+  const [open, setOpen] = useState(false)
+  return <SidebarContext.Provider value={{ open, setOpen }}>{children}</SidebarContext.Provider>
+}
+
 export function Sidebar() {
   const isMobile = useIsMobile()
-  const [open, setOpen] = useState(false)
 
+  // En móvil, el sidebar se maneja desde SidebarTrigger, así que no renderizamos nada aquí
   if (isMobile) {
-    return (
-      <Sheet open={open} onOpenChange={setOpen}>
-        <SheetTrigger asChild>
-          <Button variant="ghost" size="icon" className="md:hidden">
-            <FaBars className="h-5 w-5" />
-          </Button>
-        </SheetTrigger>
-        <SheetContent side="left" className="w-64 p-0 bg-sidebar border-sidebar-border">
-          <SidebarContent onLinkClick={() => setOpen(false)} />
-        </SheetContent>
-      </Sheet>
-    )
+    return null
   }
 
   return (
     <aside className="hidden md:flex w-64 bg-sidebar border-r border-sidebar-border flex-col h-screen sticky top-0">
       <SidebarContent />
     </aside>
+  )
+}
+
+export function SidebarTrigger() {
+  const isMobile = useIsMobile()
+  const { open, setOpen } = React.useContext(SidebarContext)
+
+  if (!isMobile) return null
+
+  return (
+    <Sheet open={open} onOpenChange={setOpen}>
+      <SheetTrigger asChild>
+        <Button variant="ghost" size="icon">
+          <FaBars className="h-5 w-5" />
+        </Button>
+      </SheetTrigger>
+      <SheetContent side="left" className="w-64 p-0 bg-sidebar border-sidebar-border">
+        <SidebarContent onLinkClick={() => setOpen(false)} />
+      </SheetContent>
+    </Sheet>
   )
 }

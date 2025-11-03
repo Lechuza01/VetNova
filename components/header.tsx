@@ -15,7 +15,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { FaSignOutAlt, FaUser, FaShoppingCart } from "react-icons/fa"
 import { useCart } from "@/contexts/cart-context"
-import { Sidebar } from "@/components/sidebar"
+import { SidebarTrigger } from "@/components/sidebar"
 import Link from "next/link"
 
 export function Header() {
@@ -43,7 +43,7 @@ export function Header() {
     <header className="bg-card border-b border-border sticky top-0 z-10">
       <div className="flex items-center justify-between px-4 md:px-6 py-3 md:py-4">
         <div className="flex items-center gap-3 flex-1 min-w-0">
-          <Sidebar />
+          <SidebarTrigger />
           <div className="min-w-0">
             <h2 className="text-base md:text-lg font-semibold text-foreground truncate">
               Bienvenido, {user?.name}
