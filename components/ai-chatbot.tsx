@@ -109,8 +109,8 @@ export function AIChatbot() {
   }
 
   return (
-    <Card className="fixed bottom-6 right-6 w-96 h-[600px] shadow-2xl z-50 flex flex-col">
-      <CardHeader className="border-b">
+    <Card className="fixed bottom-6 right-6 w-96 h-[700px] shadow-2xl z-50 flex flex-col overflow-hidden">
+      <CardHeader className="border-b flex-shrink-0">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="bg-primary text-primary-foreground p-2 rounded-full">
@@ -127,9 +127,10 @@ export function AIChatbot() {
         </div>
       </CardHeader>
 
-      <CardContent className="flex-1 p-0 flex flex-col">
-        <ScrollArea className="flex-1 p-4">
-          <div className="space-y-4">
+      <CardContent className="flex-1 p-0 flex flex-col overflow-hidden min-h-0">
+        <div className="flex-1 min-h-0 overflow-hidden">
+          <ScrollArea className="h-full w-full">
+            <div className="p-4 space-y-4">
             {messages.map((message) => (
               <div
                 key={message.id}
@@ -178,10 +179,11 @@ export function AIChatbot() {
                 </div>
               </div>
             )}
-          </div>
-        </ScrollArea>
+            </div>
+          </ScrollArea>
+        </div>
 
-        <div className="border-t p-4">
+        <div className="border-t p-4 flex-shrink-0 bg-background z-10">
           <div className="flex gap-2">
             <Input
               placeholder="Escribe tu consulta..."

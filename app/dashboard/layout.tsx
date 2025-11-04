@@ -9,6 +9,7 @@ import { Sidebar, SidebarProvider } from "@/components/sidebar"
 import { Header } from "@/components/header"
 import { Toaster } from "@/components/ui/toaster"
 import { AIChatbot } from "@/components/ai-chatbot"
+import { EmergencyButton } from "@/components/emergency-button"
 
 export default function DashboardLayout({
   children,
@@ -38,6 +39,7 @@ export default function DashboardLayout({
         </div>
         <Toaster />
         <AIChatbot />
+        <EmergencyButton />
       </div>
     </SidebarProvider>
   )

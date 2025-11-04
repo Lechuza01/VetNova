@@ -16,19 +16,38 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { Textarea } from "@/components/ui/textarea"
-import { FaPlus, FaEdit, FaTrash, FaSearch, FaDog, FaCat, FaFileAlt } from "react-icons/fa"
+import { FaPlus, FaEdit, FaTrash, FaSearch, FaDog, FaCat, FaFileAlt, FaExclamationTriangle, FaUserTimes } from "react-icons/fa"
 import Image from "next/image"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useClinic } from "@/contexts/clinic-context"
+import { useToast } from "@/hooks/use-toast"
 
 export default function PetsPage() {
-  const { pets, clients, medicalRecords, addPet, addMedicalRecord } = useClinic()
+  const { pets, clients, medicalRecords, addPet, addMedicalRecord, updatePet } = useClinic()
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedPet, setSelectedPet] = useState<string | null>(null)
+  const [statusDialogOpen, setStatusDialogOpen] = useState<Record<string, boolean>>({})
 
   const filteredPets = pets.filter(
     (pet) =>
@@ -154,15 +173,65 @@ export default function PetsPage() {
                                 pet={pet}
                                 records={getPetRecords(pet.id)}
                                 onAddRecord={addMedicalRecord}
+                                onUpdatePet={updatePet}
+                                clients={clients}
                               />
                             </DialogContent>
                           </Dialog>
-                          <Button variant="ghost" size="sm">
-                            <FaEdit className="w-4 h-4" />
-                          </Button>
-                          <Button variant="ghost" size="sm">
-                            <FaTrash className="w-4 h-4 text-destructive" />
-                          </Button>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm">
+                                <FaExclamationTriangle className="w-4 h-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <Dialog open={statusDialogOpen[pet.id] || false} onOpenChange={(open) => setStatusDialogOpen((prev) => ({ ...prev, [pet.id]: open }))}>
+                                <DialogTrigger asChild>
+                                  <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                    <FaExclamationTriangle className="mr-2 h-4 w-4" />
+                                    Informar Fallecimiento
+                                  </DropdownMenuItem>
+                                </DialogTrigger>
+                                <DialogContent>
+                                  <DialogHeader>
+                                    <DialogTitle>Informar Fallecimiento</DialogTitle>
+                                    <DialogDescription>Registrar el fallecimiento de {pet.name}</DialogDescription>
+                                  </DialogHeader>
+                                  <PetStatusForm
+                                    pet={pet}
+                                    statusType="deceased"
+                                    onSubmit={(data) => {
+                                      updatePet(pet.id, data)
+                                      setStatusDialogOpen((prev) => ({ ...prev, [pet.id]: false }))
+                                    }}
+                                  />
+                                </DialogContent>
+                              </Dialog>
+                              <Dialog open={statusDialogOpen[`${pet.id}_transfer`] || false} onOpenChange={(open) => setStatusDialogOpen((prev) => ({ ...prev, [`${pet.id}_transfer`]: open }))}>
+                                <DialogTrigger asChild>
+                                  <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                    <FaUserTimes className="mr-2 h-4 w-4" />
+                                    Cambio de Dueño
+                                  </DropdownMenuItem>
+                                </DialogTrigger>
+                                <DialogContent>
+                                  <DialogHeader>
+                                    <DialogTitle>Cambio de Dueño</DialogTitle>
+                                    <DialogDescription>Registrar cambio de propietario para {pet.name}</DialogDescription>
+                                  </DialogHeader>
+                                  <PetStatusForm
+                                    pet={pet}
+                                    statusType="transferred"
+                                    clients={clients}
+                                    onSubmit={(data) => {
+                                      updatePet(pet.id, data)
+                                      setStatusDialogOpen((prev) => ({ ...prev, [`${pet.id}_transfer`]: false }))
+                                    }}
+                                  />
+                                </DialogContent>
+                              </Dialog>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -288,7 +357,10 @@ function MedicalHistory({
   pet,
   records,
   onAddRecord,
-}: { pet: any; records: any[]; onAddRecord: (record: any) => void }) {
+  onUpdatePet,
+  clients,
+}: { pet: any; records: any[]; onAddRecord: (record: any) => void; onUpdatePet: (id: string, data: any) => void; clients: any[] }) {
+  const { toast } = useToast()
   return (
     <Tabs defaultValue="info" className="w-full">
       <TabsList className="grid w-full grid-cols-2">
@@ -340,12 +412,91 @@ function MedicalHistory({
                 <p className="text-sm text-muted-foreground">Microchip</p>
                 <p className="font-medium">{pet.microchipNumber || "No registrado"}</p>
               </div>
+              {pet.status && (
+                <div className="col-span-2">
+                  <p className="text-sm text-muted-foreground">Estado</p>
+                  <Badge variant={pet.status === "deceased" ? "destructive" : "secondary"}>
+                    {pet.status === "deceased" ? "Fallecida" : pet.status === "transferred" ? "Cambio de Dueño" : pet.status}
+                  </Badge>
+                  {pet.statusDate && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Fecha: {new Date(pet.statusDate).toLocaleDateString()}
+                    </p>
+                  )}
+                  {pet.statusNotes && (
+                    <p className="text-sm mt-2">{pet.statusNotes}</p>
+                  )}
+                </div>
+              )}
               {pet.notes && (
                 <div className="col-span-2">
                   <p className="text-sm text-muted-foreground">Notas</p>
                   <p className="font-medium">{pet.notes}</p>
                 </div>
               )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Sección de Estado de la Mascota */}
+        <Card className="border-destructive/20">
+          <CardHeader>
+            <CardTitle className="text-destructive">Estado de la Mascota</CardTitle>
+            <CardDescription>Informar cambios importantes en el estado de la mascota</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button variant="destructive" className="w-full sm:w-auto">
+                    <FaExclamationTriangle className="mr-2" />
+                    Informar Fallecimiento
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Informar Fallecimiento</DialogTitle>
+                    <DialogDescription>Registrar el fallecimiento de {pet.name}</DialogDescription>
+                  </DialogHeader>
+                  <PetStatusForm
+                    pet={pet}
+                    statusType="deceased"
+                    onSubmit={(data) => {
+                      onUpdatePet(pet.id, data)
+                      toast({
+                        title: "Fallecimiento registrado",
+                        description: `Se ha registrado el fallecimiento de ${pet.name}`,
+                      })
+                    }}
+                  />
+                </DialogContent>
+              </Dialog>
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button variant="outline" className="w-full sm:w-auto">
+                    <FaUserTimes className="mr-2" />
+                    Cambio de Dueño
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Cambio de Dueño</DialogTitle>
+                    <DialogDescription>Registrar cambio de propietario para {pet.name}</DialogDescription>
+                  </DialogHeader>
+                  <PetStatusForm
+                    pet={pet}
+                    statusType="transferred"
+                    clients={clients}
+                    onSubmit={(data) => {
+                      onUpdatePet(pet.id, data)
+                      toast({
+                        title: "Cambio de dueño registrado",
+                        description: `Se ha registrado el cambio de propietario para ${pet.name}`,
+                      })
+                    }}
+                  />
+                </DialogContent>
+              </Dialog>
             </div>
           </CardContent>
         </Card>
@@ -474,6 +625,80 @@ function MedicalRecordForm({ petId, onSubmit }: { petId: string; onSubmit: (reco
           Cancelar
         </Button>
         <Button type="submit">Guardar Consulta</Button>
+      </div>
+    </form>
+  )
+}
+
+function PetStatusForm({
+  pet,
+  statusType,
+  clients,
+  onSubmit,
+}: {
+  pet: any
+  statusType: "deceased" | "transferred"
+  clients?: any[]
+  onSubmit: (data: any) => void
+}) {
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    const formData = new FormData(e.currentTarget)
+    const data: any = {
+      status: statusType,
+      statusDate: formData.get("statusDate") as string,
+      statusNotes: formData.get("statusNotes") as string,
+    }
+    if (statusType === "transferred" && formData.get("newClientId")) {
+      data.clientId = formData.get("newClientId") as string
+    }
+    onSubmit(data)
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      {statusType === "transferred" && clients && (
+        <div className="space-y-2">
+          <Label htmlFor="newClientId">Nuevo Propietario *</Label>
+          <Select name="newClientId" required>
+            <SelectTrigger>
+              <SelectValue placeholder="Seleccionar nuevo propietario" />
+            </SelectTrigger>
+            <SelectContent>
+              {clients.map((client) => (
+                <SelectItem key={client.id} value={client.id}>
+                  {client.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+      <div className="space-y-2">
+        <Label htmlFor="statusDate">
+          {statusType === "deceased" ? "Fecha de Fallecimiento" : "Fecha de Cambio"} *
+        </Label>
+        <Input
+          id="statusDate"
+          name="statusDate"
+          type="date"
+          required
+          defaultValue={new Date().toISOString().split("T")[0]}
+        />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="statusNotes">Notas</Label>
+        <Textarea
+          id="statusNotes"
+          name="statusNotes"
+          placeholder={statusType === "deceased" ? "Causa del fallecimiento, observaciones..." : "Motivo del cambio de dueño..."}
+          rows={4}
+        />
+      </div>
+      <div className="flex justify-end gap-2 pt-4">
+        <Button type="submit">
+          {statusType === "deceased" ? "Registrar Fallecimiento" : "Registrar Cambio"}
+        </Button>
       </div>
     </form>
   )

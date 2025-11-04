@@ -162,7 +162,17 @@ export default function LoginPage() {
               <Button type="submit" className="w-full" disabled={isLoading}>
                 {isLoading ? "Iniciando sesión..." : "Iniciar Sesión"}
               </Button>
-              <div className="text-xs text-center text-muted-foreground mt-4">
+              <div className="text-center mt-4">
+                <Button
+                  type="button"
+                  variant="link"
+                  className="text-sm"
+                  onClick={() => router.push("/create-account")}
+                >
+                  ¿No tienes cuenta? Crear cuenta
+                </Button>
+              </div>
+              <div className="text-xs text-center text-muted-foreground mt-2">
                 <p>Demo: admin / admin123 o veterinario / vet123</p>
               </div>
             </form>

@@ -36,6 +36,9 @@ export interface Pet {
   microchipNumber?: string
   notes?: string
   photo?: string
+  status?: "active" | "deceased" | "transferred" | "adopted"
+  statusDate?: string
+  statusNotes?: string
 }
 
 export interface MedicalRecord {
