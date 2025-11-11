@@ -4,7 +4,7 @@ export interface User {
   username: string
   email: string
   name: string
-  role: "admin" | "veterinarian" | "receptionist"
+  role: "admin" | "veterinarian" | "receptionist" | "cliente"
   phone?: string
   address?: string
   birthDate?: string
@@ -34,6 +34,18 @@ export const mockUsers: Record<string, { password: string; user: User }> = {
       role: "veterinarian",
       phone: "+34 600 654 321",
       birthDate: "1990-07-22",
+    },
+  },
+  cliente: {
+    password: "cliente123",
+    user: {
+      id: "3",
+      username: "cliente",
+      email: "ana.martinez@email.com",
+      name: "Ana Martínez",
+      role: "cliente",
+      phone: "+34 600 111 222",
+      birthDate: "1992-05-20",
     },
   },
 }

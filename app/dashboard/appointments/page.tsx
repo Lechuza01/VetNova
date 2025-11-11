@@ -23,11 +23,28 @@ import { Calendar } from "@/components/ui/calendar"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { FaPlus, FaEdit, FaTrash, FaCheck } from "react-icons/fa"
 import { useClinic } from "@/contexts/clinic-context"
+import { useAuth } from "@/contexts/auth-context"
+import { mockUsers } from "@/lib/auth"
+import type { User } from "@/lib/types"
+import { useToast } from "@/hooks/use-toast"
 
 export default function AppointmentsPage() {
   const { appointments, pets, clients, addAppointment, updateAppointment, deleteAppointment } = useClinic()
+  const { user: currentUser } = useAuth()
   const [selectedDate, setSelectedDate] = useState<Date>(new Date())
   const [filterStatus, setFilterStatus] = useState<string>("all")
+  const [editingVet, setEditingVet] = useState<string | null>(null)
+  const [selectedTimeSlot, setSelectedTimeSlot] = useState<string>("")
+
+  // Obtener lista de veterinarios y profesionales (veterinarian, admin)
+  const professionals = Object.values(mockUsers)
+    .map((u) => u.user)
+    .filter((u) => u.role === "veterinarian" || u.role === "admin")
+
+  // Si es cliente, mostrar vista de disponibilidad
+  if (currentUser?.role === "cliente") {
+    return <ClientAvailabilityView appointments={appointments} pets={pets} clients={clients} addAppointment={addAppointment} />
+  }
 
   const getStatusBadge = (status: string) => {
     const variants: Record<string, { variant: "default" | "secondary" | "destructive"; label: string }> = {
@@ -42,6 +59,10 @@ export default function AppointmentsPage() {
 
   const getPetName = (petId: string) => pets.find((p) => p.id === petId)?.name || "Desconocido"
   const getClientName = (clientId: string) => clients.find((c) => c.id === clientId)?.name || "Desconocido"
+  const getVeterinarianName = (vetId: string) => {
+    const vet = professionals.find((p) => p.id === vetId)
+    return vet?.name || "Sin asignar"
+  }
 
   const filteredAppointments = appointments.filter((apt) => {
     if (filterStatus !== "all" && apt.status !== filterStatus) return false
@@ -72,13 +93,13 @@ export default function AppointmentsPage() {
               Nuevo Turno
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Agendar Nuevo Turno</DialogTitle>
-              <DialogDescription>Completa los datos de la cita</DialogDescription>
-            </DialogHeader>
-            <AppointmentForm pets={pets} clients={clients} onSubmit={addAppointment} />
-          </DialogContent>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>Agendar Nuevo Turno</DialogTitle>
+                <DialogDescription>Completa los datos de la cita</DialogDescription>
+              </DialogHeader>
+              <AppointmentForm pets={pets} clients={clients} professionals={professionals} onSubmit={addAppointment} />
+            </DialogContent>
         </Dialog>
       </div>
 
@@ -151,6 +172,7 @@ export default function AppointmentsPage() {
                       <TableHead>Hora</TableHead>
                       <TableHead>Mascota</TableHead>
                       <TableHead>Cliente</TableHead>
+                      <TableHead>Veterinario/Profesional</TableHead>
                       <TableHead>Motivo</TableHead>
                       <TableHead>Estado</TableHead>
                       <TableHead className="text-right">Acciones</TableHead>
@@ -163,6 +185,43 @@ export default function AppointmentsPage() {
                         <TableCell className="font-medium">{appointment.time}</TableCell>
                         <TableCell>{getPetName(appointment.petId)}</TableCell>
                         <TableCell>{getClientName(appointment.clientId)}</TableCell>
+                        <TableCell>
+                          {currentUser?.role === "admin" && editingVet === appointment.id ? (
+                            <Select
+                              value={appointment.veterinarianId}
+                              onValueChange={(value) => {
+                                updateAppointment(appointment.id, { veterinarianId: value })
+                                setEditingVet(null)
+                              }}
+                              onOpenChange={(open) => !open && setEditingVet(null)}
+                            >
+                              <SelectTrigger className="w-[200px]">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {professionals.map((prof) => (
+                                  <SelectItem key={prof.id} value={prof.id}>
+                                    {prof.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          ) : (
+                            <div className="flex items-center gap-2">
+                              <span>{getVeterinarianName(appointment.veterinarianId)}</span>
+                              {currentUser?.role === "admin" && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 px-2"
+                                  onClick={() => setEditingVet(appointment.id)}
+                                >
+                                  <FaEdit className="w-3 h-3" />
+                                </Button>
+                              )}
+                            </div>
+                          )}
+                        </TableCell>
                         <TableCell>{appointment.reason}</TableCell>
                         <TableCell>{getStatusBadge(appointment.status)}</TableCell>
                         <TableCell className="text-right">
@@ -241,6 +300,9 @@ export default function AppointmentsPage() {
                               {getPetName(appointment.petId)} - {getClientName(appointment.clientId)}
                             </p>
                             <p className="text-sm text-muted-foreground">{appointment.reason}</p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Veterinario: {getVeterinarianName(appointment.veterinarianId)}
+                            </p>
                           </div>
                         </div>
                         {getStatusBadge(appointment.status)}
@@ -264,13 +326,16 @@ export default function AppointmentsPage() {
 function AppointmentForm({
   pets,
   clients,
+  professionals,
   onSubmit,
 }: {
   pets: any[]
   clients: any[]
+  professionals: User[]
   onSubmit: (appointment: any) => void
 }) {
   const [selectedPet, setSelectedPet] = useState<string>("")
+  const [selectedVeterinarian, setSelectedVeterinarian] = useState<string>("")
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -280,7 +345,7 @@ function AppointmentForm({
       id: Date.now().toString(),
       petId: selectedPet,
       clientId: pet?.clientId || "",
-      veterinarianId: "2",
+      veterinarianId: selectedVeterinarian || professionals[0]?.id || "",
       date: formData.get("date") as string,
       time: formData.get("time") as string,
       reason: formData.get("reason") as string,
@@ -331,6 +396,22 @@ function AppointmentForm({
       </div>
 
       <div className="space-y-2">
+        <Label htmlFor="veterinarianId">Veterinario/Profesional *</Label>
+        <Select value={selectedVeterinarian} onValueChange={setSelectedVeterinarian} required>
+          <SelectTrigger>
+            <SelectValue placeholder="Seleccionar veterinario" />
+          </SelectTrigger>
+          <SelectContent>
+            {professionals.map((prof) => (
+              <SelectItem key={prof.id} value={prof.id}>
+                {prof.name} ({prof.role === "admin" ? "Administrador" : "Veterinario"})
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-2">
         <Label htmlFor="reason">Motivo de la Consulta *</Label>
         <Input id="reason" name="reason" required placeholder="Vacunación, revisión, emergencia..." />
       </div>
@@ -347,5 +428,271 @@ function AppointmentForm({
         <Button type="submit">Agendar Turno</Button>
       </div>
     </form>
+  )
+}
+
+// Vista para clientes: mostrar solo fechas y horarios disponibles
+function ClientAvailabilityView({
+  appointments,
+  pets,
+  clients,
+  addAppointment,
+}: {
+  appointments: any[]
+  pets: any[]
+  clients: any[]
+  addAppointment: (appointment: any) => void
+}) {
+  const { user: currentUser } = useAuth()
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date())
+  const [selectedTimeSlot, setSelectedTimeSlot] = useState<string>("")
+  const [selectedPet, setSelectedPet] = useState<string>("")
+  const [reason, setReason] = useState<string>("")
+  const [showRequestForm, setShowRequestForm] = useState(false)
+  const { toast } = useToast()
+
+  // Obtener lista de veterinarios y profesionales
+  const professionals = Object.values(mockUsers)
+    .map((u) => u.user)
+    .filter((u) => u.role === "veterinarian" || u.role === "admin")
+
+  // Obtener mascotas del cliente actual (buscando por email o nombre)
+  const clientPets = pets.filter((pet) => {
+    const client = clients.find((c) => c.id === pet.clientId)
+    // Buscar por email o nombre del cliente
+    return client && (client.email === currentUser?.email || client.name === currentUser?.name)
+  })
+
+  // Horarios disponibles: de 9:00 a 18:00 con intervalos de 30 minutos
+  const generateTimeSlots = () => {
+    const slots: string[] = []
+    for (let hour = 9; hour < 18; hour++) {
+      slots.push(`${hour.toString().padStart(2, "0")}:00`)
+      slots.push(`${hour.toString().padStart(2, "0")}:30`)
+    }
+    return slots
+  }
+
+  const timeSlots = generateTimeSlots()
+
+  // Obtener turnos ocupados para una fecha específica
+  const getOccupiedSlots = (date: string) => {
+    const dateAppointments = appointments.filter(
+      (apt) => apt.date === date && (apt.status === "pending" || apt.status === "confirmed"),
+    )
+    return dateAppointments.map((apt) => apt.time)
+  }
+
+  // Obtener horarios disponibles para la fecha seleccionada
+  const getAvailableSlots = (date: string) => {
+    const occupiedSlots = getOccupiedSlots(date)
+    return timeSlots.filter((slot) => !occupiedSlots.includes(slot))
+  }
+
+  const availableSlots = getAvailableSlots(selectedDate.toISOString().split("T")[0])
+
+  // Verificar si una fecha tiene disponibilidad
+  const hasAvailability = (date: Date) => {
+    const dateStr = date.toISOString().split("T")[0]
+    const available = getAvailableSlots(dateStr)
+    return available.length > 0
+  }
+
+  // Fechas no disponibles (por ejemplo, días festivos, días de cierre, etc.)
+  const getUnavailableDates = (): string[] => {
+    const today = new Date()
+    const unavailableDates: string[] = []
+    
+    // Calcular fechas específicas no disponibles (ejemplo: 13/11 y 15/11)
+    const unavailableDays = [13, 15] // Días del mes actual
+    const currentMonth = today.getMonth()
+    const currentYear = today.getFullYear()
+    
+    unavailableDays.forEach((day) => {
+      const unavailableDate = new Date(currentYear, currentMonth, day)
+      // Solo agregar si la fecha es futura
+      if (unavailableDate >= today) {
+        unavailableDates.push(unavailableDate.toISOString().split("T")[0])
+      }
+    })
+    
+    return unavailableDates
+  }
+
+  const unavailableDates = getUnavailableDates()
+
+  // Deshabilitar fechas pasadas y fechas marcadas como no disponibles
+  const isDateDisabled = (date: Date) => {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const selected = new Date(date)
+    selected.setHours(0, 0, 0, 0)
+    const dateStr = selected.toISOString().split("T")[0]
+    
+    // Deshabilitar fechas pasadas o fechas no disponibles
+    return selected < today || unavailableDates.includes(dateStr)
+  }
+
+  const handleTimeSlotClick = (time: string) => {
+    setSelectedTimeSlot(time)
+    setShowRequestForm(true)
+  }
+
+  const handleRequestAppointment = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!selectedPet || !selectedTimeSlot || !reason) {
+      toast({
+        title: "Error",
+        description: "Por favor completa todos los campos requeridos",
+        variant: "destructive",
+      })
+      return
+    }
+
+    const pet = pets.find((p) => p.id === selectedPet)
+    const appointment = {
+      id: Date.now().toString(),
+      petId: selectedPet,
+      clientId: pet?.clientId || "",
+      veterinarianId: professionals[0]?.id || "", // Asignar automáticamente al primer veterinario disponible
+      date: selectedDate.toISOString().split("T")[0],
+      time: selectedTimeSlot,
+      reason: reason,
+      status: "pending",
+      notes: "",
+    }
+
+    addAppointment(appointment)
+    toast({
+      title: "Turno solicitado",
+      description: `Tu turno para el ${selectedDate.toLocaleDateString()} a las ${selectedTimeSlot} ha sido solicitado correctamente`,
+    })
+
+    // Resetear formulario
+    setSelectedTimeSlot("")
+    setSelectedPet("")
+    setReason("")
+    setShowRequestForm(false)
+  }
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold text-foreground">Solicitar Turno</h1>
+        <p className="text-muted-foreground mt-1">Selecciona una fecha y horario disponible</p>
+      </div>
+
+      <div className="grid md:grid-cols-[350px_1fr] gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Seleccionar Fecha</CardTitle>
+            <CardDescription>Elige una fecha con disponibilidad</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Calendar
+              mode="single"
+              selected={selectedDate}
+              onSelect={(date) => {
+                if (date) {
+                  setSelectedDate(date)
+                  setSelectedTimeSlot("")
+                  setShowRequestForm(false)
+                }
+              }}
+              disabled={isDateDisabled}
+              className="rounded-md border"
+            />
+            <div className="mt-4 p-3 bg-muted rounded-lg">
+              <p className="text-sm text-muted-foreground">
+                <span className="font-medium text-foreground">Horarios:</span> 9:00 - 18:00
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">Intervalos de 30 minutos</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Horarios Disponibles</CardTitle>
+            <CardDescription>
+              {selectedDate.toLocaleDateString()} - {availableSlots.length} horarios disponibles
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {availableSlots.length > 0 ? (
+              <div className="grid grid-cols-3 md:grid-cols-4 gap-3">
+                {availableSlots.map((slot) => (
+                  <Button
+                    key={slot}
+                    variant={selectedTimeSlot === slot ? "default" : "outline"}
+                    onClick={() => handleTimeSlotClick(slot)}
+                    className="h-12"
+                  >
+                    {slot}
+                  </Button>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                <p>No hay horarios disponibles para esta fecha</p>
+                <p className="text-sm mt-2">Por favor selecciona otra fecha</p>
+              </div>
+            )}
+
+            {showRequestForm && selectedTimeSlot && (
+              <div className="mt-6 p-4 border rounded-lg bg-muted/50">
+                <h3 className="font-semibold mb-4">Solicitar Turno</h3>
+                <form onSubmit={handleRequestAppointment} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="pet">Mascota *</Label>
+                    <Select value={selectedPet} onValueChange={setSelectedPet} required>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Seleccionar mascota" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {clientPets.map((pet) => (
+                          <SelectItem key={pet.id} value={pet.id}>
+                            {pet.name} ({pet.species})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="reason">Motivo de la Consulta *</Label>
+                    <Input
+                      id="reason"
+                      value={reason}
+                      onChange={(e) => setReason(e.target.value)}
+                      required
+                      placeholder="Vacunación, revisión, emergencia..."
+                    />
+                  </div>
+
+                  <div className="bg-background p-3 rounded border">
+                    <p className="text-sm">
+                      <span className="font-medium">Fecha:</span> {selectedDate.toLocaleDateString()}
+                    </p>
+                    <p className="text-sm">
+                      <span className="font-medium">Hora:</span> {selectedTimeSlot}
+                    </p>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <Button type="button" variant="outline" onClick={() => setShowRequestForm(false)} className="flex-1">
+                      Cancelar
+                    </Button>
+                    <Button type="submit" className="flex-1">
+                      Solicitar Turno
+                    </Button>
+                  </div>
+                </form>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </div>
   )
 }

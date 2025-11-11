@@ -33,12 +33,19 @@ export default function UsersPage() {
   )
 
   const getRoleBadge = (role: string) => {
+    const roleLabels: Record<string, string> = {
+      admin: "Administrador",
+      veterinarian: "Veterinario",
+      receptionist: "Recepcionista",
+      cliente: "Cliente",
+    }
     const variants: Record<string, "default" | "secondary" | "destructive"> = {
       admin: "destructive",
       veterinarian: "default",
       receptionist: "secondary",
+      cliente: "secondary",
     }
-    return <Badge variant={variants[role] || "default"}>{role}</Badge>
+    return <Badge variant={variants[role] || "default"}>{roleLabels[role] || role}</Badge>
   }
 
   return (

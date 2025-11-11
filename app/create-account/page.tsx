@@ -7,7 +7,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Separator } from "@/components/ui/separator"
 import { FaUserPlus, FaCheck, FaEnvelope, FaArrowLeft } from "react-icons/fa"
@@ -124,16 +123,8 @@ export default function CreateAccountPage() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="role">Rol *</Label>
-                    <Select required>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Seleccionar rol" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="veterinarian">Veterinario</SelectItem>
-                        <SelectItem value="receptionist">Recepcionista</SelectItem>
-                        <SelectItem value="admin">Administrador</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <Input id="role" value="Cliente" disabled className="bg-muted" />
+                    <input type="hidden" name="role" value="cliente" />
                   </div>
                 </div>
 
@@ -226,7 +217,7 @@ export default function CreateAccountPage() {
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">Rol</p>
-                      <p className="font-medium">Veterinario</p>
+                      <p className="font-medium">Cliente</p>
                     </div>
                   </div>
                 </div>
