@@ -24,6 +24,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { FaPlus, FaEdit, FaTrash, FaCheck } from "react-icons/fa"
 import { useClinic } from "@/contexts/clinic-context"
 import { useAuth } from "@/contexts/auth-context"
+import { useNotifications } from "@/contexts/notifications-context"
 import { mockUsers } from "@/lib/auth"
 import type { User } from "@/lib/types"
 import { useToast } from "@/hooks/use-toast"
@@ -444,11 +445,14 @@ function ClientAvailabilityView({
   addAppointment: (appointment: any) => void
 }) {
   const { user: currentUser } = useAuth()
+  const { addNotification } = useNotifications()
   const [selectedDate, setSelectedDate] = useState<Date>(new Date())
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<string>("")
   const [selectedPet, setSelectedPet] = useState<string>("")
   const [reason, setReason] = useState<string>("")
   const [showRequestForm, setShowRequestForm] = useState(false)
+  const [showEmailDialog, setShowEmailDialog] = useState(false)
+  const [appointmentDetails, setAppointmentDetails] = useState<{ date: string; time: string; pet: string; reason: string } | null>(null)
   const { toast } = useToast()
 
   // Obtener lista de veterinarios y profesionales
@@ -550,8 +554,9 @@ function ClientAvailabilityView({
     }
 
     const pet = pets.find((p) => p.id === selectedPet)
+    const appointmentId = Date.now().toString()
     const appointment = {
-      id: Date.now().toString(),
+      id: appointmentId,
       petId: selectedPet,
       clientId: pet?.clientId || "",
       veterinarianId: professionals[0]?.id || "", // Asignar automáticamente al primer veterinario disponible
@@ -563,10 +568,23 @@ function ClientAvailabilityView({
     }
 
     addAppointment(appointment)
-    toast({
-      title: "Turno solicitado",
-      description: `Tu turno para el ${selectedDate.toLocaleDateString()} a las ${selectedTimeSlot} ha sido solicitado correctamente`,
+    
+    // Crear notificación para el cliente
+    addNotification({
+      title: "Turno Reservado",
+      message: `Tu turno para ${pet?.name || "tu mascota"} el ${selectedDate.toLocaleDateString()} a las ${selectedTimeSlot} ha sido reservado correctamente. Motivo: ${reason}`,
+      type: "appointment",
+      appointmentId: appointmentId,
     })
+
+    // Guardar detalles para el dialog de email
+    setAppointmentDetails({
+      date: selectedDate.toLocaleDateString(),
+      time: selectedTimeSlot,
+      pet: pet?.name || "",
+      reason: reason,
+    })
+    setShowEmailDialog(true)
 
     // Resetear formulario
     setSelectedTimeSlot("")
@@ -693,6 +711,62 @@ function ClientAvailabilityView({
           </CardContent>
         </Card>
       </div>
+
+      {/* Dialog de confirmación de email */}
+      <Dialog open={showEmailDialog} onOpenChange={setShowEmailDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <div className="bg-primary/10 p-2 rounded-full">
+                <svg
+                  className="w-5 h-5 text-primary"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                  />
+                </svg>
+              </div>
+              Email Enviado
+            </DialogTitle>
+            <DialogDescription>
+              Se ha enviado un email de confirmación a tu dirección de correo electrónico
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="bg-muted p-4 rounded-lg space-y-2">
+              <p className="text-sm font-medium">Detalles del turno:</p>
+              <div className="space-y-1 text-sm text-muted-foreground">
+                <p>
+                  <span className="font-medium">Mascota:</span> {appointmentDetails?.pet}
+                </p>
+                <p>
+                  <span className="font-medium">Fecha:</span> {appointmentDetails?.date}
+                </p>
+                <p>
+                  <span className="font-medium">Hora:</span> {appointmentDetails?.time}
+                </p>
+                <p>
+                  <span className="font-medium">Motivo:</span> {appointmentDetails?.reason}
+                </p>
+              </div>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Revisa tu bandeja de entrada para ver la confirmación completa del turno. Te recordaremos el turno con
+              anticipación.
+            </p>
+          </div>
+          <div className="flex justify-end">
+            <Button onClick={() => setShowEmailDialog(false)}>Entendido</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

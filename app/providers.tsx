@@ -7,17 +7,20 @@ import { ClinicProvider } from "@/contexts/clinic-context"
 import { CartProvider } from "@/contexts/cart-context"
 import { OrdersProvider } from "@/contexts/orders-context"
 import { CommunityProvider } from "@/contexts/community-context"
+import { NotificationsProvider } from "@/contexts/notifications-context"
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <AuthProvider>
-      <ClinicProvider>
-        <CartProvider>
-          <OrdersProvider>
-            <CommunityProvider>{children}</CommunityProvider>
-          </OrdersProvider>
-        </CartProvider>
-      </ClinicProvider>
+      <NotificationsProvider>
+        <ClinicProvider>
+          <CartProvider>
+            <OrdersProvider>
+              <CommunityProvider>{children}</CommunityProvider>
+            </OrdersProvider>
+          </CartProvider>
+        </ClinicProvider>
+      </NotificationsProvider>
     </AuthProvider>
   )
 }

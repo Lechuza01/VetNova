@@ -13,10 +13,13 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
-import { FaSignOutAlt, FaUser, FaShoppingCart } from "react-icons/fa"
+import { FaSignOutAlt, FaUser, FaShoppingCart, FaBell } from "react-icons/fa"
 import { useCart } from "@/contexts/cart-context"
+import { useNotifications } from "@/contexts/notifications-context"
 import { SidebarTrigger } from "@/components/sidebar"
 import Link from "next/link"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { formatDistanceToNow } from "date-fns"
 
 export function Header() {
   const { user, logout } = useAuth()
@@ -24,6 +27,8 @@ export function Header() {
   const pathname = usePathname()
   const { getItemCount } = useCart()
   const cartCount = getItemCount()
+  const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications()
+  const isClient = user?.role === "cliente"
 
   const handleLogout = () => {
     logout()
@@ -66,6 +71,76 @@ export function Header() {
                 )}
               </Button>
             </Link>
+          )}
+
+          {/* Notificaciones solo para clientes */}
+          {isClient && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="relative">
+                  <FaBell className="w-4 h-4 md:w-5 md:h-5" />
+                  {unreadCount > 0 && (
+                    <Badge className="absolute -top-1 -right-1 h-4 w-4 md:h-5 md:w-5 flex items-center justify-center p-0 text-xs bg-destructive text-destructive-foreground">
+                      {unreadCount > 9 ? "9+" : unreadCount}
+                    </Badge>
+                  )}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-80">
+                <DropdownMenuLabel className="flex items-center justify-between">
+                  <span>Notificaciones</span>
+                  {unreadCount > 0 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 text-xs"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        markAllAsRead()
+                      }}
+                    >
+                      Marcar todas como leídas
+                    </Button>
+                  )}
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <ScrollArea className="h-[400px]">
+                  {notifications.length > 0 ? (
+                    <div className="space-y-1 p-1">
+                      {notifications.map((notification) => (
+                        <div
+                          key={notification.id}
+                          className={`p-3 rounded-lg cursor-pointer transition-colors ${
+                            notification.read ? "bg-background" : "bg-primary/5"
+                          } hover:bg-accent`}
+                          onClick={() => !notification.read && markAsRead(notification.id)}
+                        >
+                          <div className="flex items-start gap-2">
+                            <div className="flex-1 min-w-0">
+                              <p className={`text-sm font-medium ${notification.read ? "" : "font-semibold"}`}>
+                                {notification.title}
+                              </p>
+                              <p className="text-xs text-muted-foreground mt-1">{notification.message}</p>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                {formatDistanceToNow(new Date(notification.date), { addSuffix: true })}
+                              </p>
+                            </div>
+                            {!notification.read && (
+                              <div className="h-2 w-2 rounded-full bg-primary mt-1 flex-shrink-0" />
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="p-8 text-center text-muted-foreground">
+                      <FaBell className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                      <p className="text-sm">No hay notificaciones</p>
+                    </div>
+                  )}
+                </ScrollArea>
+              </DropdownMenuContent>
+            </DropdownMenu>
           )}
 
           <DropdownMenu>
