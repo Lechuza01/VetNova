@@ -41,15 +41,27 @@ import { FaPlus, FaEdit, FaTrash, FaSearch, FaDog, FaCat, FaFileAlt, FaExclamati
 import Image from "next/image"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useClinic } from "@/contexts/clinic-context"
+import { useAuth } from "@/contexts/auth-context"
 import { useToast } from "@/hooks/use-toast"
 
 export default function PetsPage() {
-  const { pets, clients, medicalRecords, addPet, addMedicalRecord, updatePet } = useClinic()
+  const { pets, clients, medicalRecords, inventory, addPet, addMedicalRecord, updatePet } = useClinic()
+  const { user } = useAuth()
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedPet, setSelectedPet] = useState<string | null>(null)
   const [statusDialogOpen, setStatusDialogOpen] = useState<Record<string, boolean>>({})
+  const [newServiceDialogOpen, setNewServiceDialogOpen] = useState(false)
+  const [selectedPetForService, setSelectedPetForService] = useState<string | null>(null)
 
-  const filteredPets = pets.filter(
+  // Si es cliente, filtrar solo sus mascotas
+  const clientPets = user?.role === "cliente" 
+    ? pets.filter((pet) => {
+        const client = clients.find((c) => c.id === pet.clientId)
+        return client && (client.email === user.email || client.name === user.name)
+      })
+    : pets
+
+  const filteredPets = clientPets.filter(
     (pet) =>
       pet.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       pet.species.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -71,29 +83,35 @@ export default function PetsPage() {
           <h1 className="text-2xl md:text-3xl font-bold text-foreground">Mascotas</h1>
           <p className="text-sm md:text-base text-muted-foreground mt-1">Gestión de mascotas y sus historiales clínicos</p>
         </div>
-        <div className="flex gap-2">
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button size="sm" className="w-full sm:w-auto">
-                <FaPlus className="mr-2" />
-                Nueva Mascota
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>Registrar Nueva Mascota</DialogTitle>
-                <DialogDescription>Completa los datos de la mascota</DialogDescription>
-              </DialogHeader>
-              <PetForm clients={clients} onSubmit={addPet} />
-            </DialogContent>
-          </Dialog>
-        </div>
+        {user?.role !== "cliente" && (
+          <div className="flex gap-2">
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button size="sm" className="w-full sm:w-auto">
+                  <FaPlus className="mr-2" />
+                  Nueva Mascota
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Registrar Nueva Mascota</DialogTitle>
+                  <DialogDescription>Completa los datos de la mascota</DialogDescription>
+                </DialogHeader>
+                <PetForm clients={clients} onSubmit={addPet} />
+              </DialogContent>
+            </Dialog>
+          </div>
+        )}
       </div>
 
       <Card>
         <CardHeader>
           <CardTitle>Lista de Mascotas</CardTitle>
-          <CardDescription>Total de {pets.length} mascotas registradas</CardDescription>
+          <CardDescription>
+            {user?.role === "cliente" 
+              ? `Tus mascotas (${clientPets.length})`
+              : `Total de ${pets.length} mascotas registradas`}
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="mb-4">
@@ -156,6 +174,17 @@ export default function PetsPage() {
                       <TableCell>{pet.weight} kg</TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedPetForService(pet.id)
+                              setNewServiceDialogOpen(true)
+                            }}
+                          >
+                            <FaPlus className="w-4 h-4 mr-1" />
+                            Nueva Consulta
+                          </Button>
                           <Dialog>
                             <DialogTrigger asChild>
                               <Button variant="ghost" size="sm" onClick={() => setSelectedPet(pet.id)}>
@@ -175,63 +204,66 @@ export default function PetsPage() {
                                 onAddRecord={addMedicalRecord}
                                 onUpdatePet={updatePet}
                                 clients={clients}
+                                inventory={inventory}
                               />
                             </DialogContent>
                           </Dialog>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="sm">
-                                <FaExclamationTriangle className="w-4 h-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <Dialog open={statusDialogOpen[pet.id] || false} onOpenChange={(open) => setStatusDialogOpen((prev) => ({ ...prev, [pet.id]: open }))}>
-                                <DialogTrigger asChild>
-                                  <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                                    <FaExclamationTriangle className="mr-2 h-4 w-4" />
-                                    Informar Fallecimiento
-                                  </DropdownMenuItem>
-                                </DialogTrigger>
-                                <DialogContent>
-                                  <DialogHeader>
-                                    <DialogTitle>Informar Fallecimiento</DialogTitle>
-                                    <DialogDescription>Registrar el fallecimiento de {pet.name}</DialogDescription>
-                                  </DialogHeader>
-                                  <PetStatusForm
-                                    pet={pet}
-                                    statusType="deceased"
-                                    onSubmit={(data) => {
-                                      updatePet(pet.id, data)
-                                      setStatusDialogOpen((prev) => ({ ...prev, [pet.id]: false }))
-                                    }}
-                                  />
-                                </DialogContent>
-                              </Dialog>
-                              <Dialog open={statusDialogOpen[`${pet.id}_transfer`] || false} onOpenChange={(open) => setStatusDialogOpen((prev) => ({ ...prev, [`${pet.id}_transfer`]: open }))}>
-                                <DialogTrigger asChild>
-                                  <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                                    <FaUserTimes className="mr-2 h-4 w-4" />
-                                    Cambio de Dueño
-                                  </DropdownMenuItem>
-                                </DialogTrigger>
-                                <DialogContent>
-                                  <DialogHeader>
-                                    <DialogTitle>Cambio de Dueño</DialogTitle>
-                                    <DialogDescription>Registrar cambio de propietario para {pet.name}</DialogDescription>
-                                  </DialogHeader>
-                                  <PetStatusForm
-                                    pet={pet}
-                                    statusType="transferred"
-                                    clients={clients}
-                                    onSubmit={(data) => {
-                                      updatePet(pet.id, data)
-                                      setStatusDialogOpen((prev) => ({ ...prev, [`${pet.id}_transfer`]: false }))
-                                    }}
-                                  />
-                                </DialogContent>
-                              </Dialog>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                          {user?.role !== "cliente" && (
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="sm">
+                                  <FaExclamationTriangle className="w-4 h-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <Dialog open={statusDialogOpen[pet.id] || false} onOpenChange={(open) => setStatusDialogOpen((prev) => ({ ...prev, [pet.id]: open }))}>
+                                  <DialogTrigger asChild>
+                                    <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                      <FaExclamationTriangle className="mr-2 h-4 w-4" />
+                                      Informar Fallecimiento
+                                    </DropdownMenuItem>
+                                  </DialogTrigger>
+                                  <DialogContent>
+                                    <DialogHeader>
+                                      <DialogTitle>Informar Fallecimiento</DialogTitle>
+                                      <DialogDescription>Registrar el fallecimiento de {pet.name}</DialogDescription>
+                                    </DialogHeader>
+                                    <PetStatusForm
+                                      pet={pet}
+                                      statusType="deceased"
+                                      onSubmit={(data) => {
+                                        updatePet(pet.id, data)
+                                        setStatusDialogOpen((prev) => ({ ...prev, [pet.id]: false }))
+                                      }}
+                                    />
+                                  </DialogContent>
+                                </Dialog>
+                                <Dialog open={statusDialogOpen[`${pet.id}_transfer`] || false} onOpenChange={(open) => setStatusDialogOpen((prev) => ({ ...prev, [`${pet.id}_transfer`]: open }))}>
+                                  <DialogTrigger asChild>
+                                    <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                      <FaUserTimes className="mr-2 h-4 w-4" />
+                                      Cambio de Dueño
+                                    </DropdownMenuItem>
+                                  </DialogTrigger>
+                                  <DialogContent>
+                                    <DialogHeader>
+                                      <DialogTitle>Cambio de Dueño</DialogTitle>
+                                      <DialogDescription>Registrar cambio de propietario para {pet.name}</DialogDescription>
+                                    </DialogHeader>
+                                    <PetStatusForm
+                                      pet={pet}
+                                      statusType="transferred"
+                                      clients={clients}
+                                      onSubmit={(data) => {
+                                        updatePet(pet.id, data)
+                                        setStatusDialogOpen((prev) => ({ ...prev, [`${pet.id}_transfer`]: false }))
+                                      }}
+                                    />
+                                  </DialogContent>
+                                </Dialog>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>
@@ -242,6 +274,31 @@ export default function PetsPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Modal de Nueva Consulta o Servicio */}
+      <Dialog open={newServiceDialogOpen} onOpenChange={setNewServiceDialogOpen}>
+        <DialogContent className="!max-w-[95vw] !w-[95vw] !sm:max-w-[95vw] max-h-[95vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Registrar Consulta o Servicio</DialogTitle>
+            <DialogDescription>
+              {selectedPetForService
+                ? `Mascota: ${pets.find((p) => p.id === selectedPetForService)?.name || "Desconocida"}`
+                : "Añadir nueva entrada al historial clínico"}
+            </DialogDescription>
+          </DialogHeader>
+          {selectedPetForService && (
+            <MedicalRecordForm
+              petId={selectedPetForService}
+              inventory={inventory}
+              onSubmit={(record) => {
+                addMedicalRecord(record)
+                setNewServiceDialogOpen(false)
+                setSelectedPetForService(null)
+              }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
@@ -359,7 +416,15 @@ function MedicalHistory({
   onAddRecord,
   onUpdatePet,
   clients,
-}: { pet: any; records: any[]; onAddRecord: (record: any) => void; onUpdatePet: (id: string, data: any) => void; clients: any[] }) {
+  inventory,
+}: {
+  pet: any
+  records: any[]
+  onAddRecord: (record: any) => void
+  onUpdatePet: (id: string, data: any) => void
+  clients: any[]
+  inventory: any[]
+}) {
   const { toast } = useToast()
   return (
     <Tabs defaultValue="info" className="w-full">
@@ -503,23 +568,6 @@ function MedicalHistory({
       </TabsContent>
 
       <TabsContent value="history" className="space-y-4">
-        <div className="flex justify-end">
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button size="sm">
-                <FaPlus className="mr-2" />
-                Nueva Consulta
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl">
-              <DialogHeader>
-                <DialogTitle>Registrar Consulta</DialogTitle>
-                <DialogDescription>Añadir nueva entrada al historial clínico</DialogDescription>
-              </DialogHeader>
-              <MedicalRecordForm petId={pet.id} onSubmit={onAddRecord} />
-            </DialogContent>
-          </Dialog>
-        </div>
 
         <div className="space-y-4">
           {records.length === 0 ? (
@@ -569,7 +617,40 @@ function MedicalHistory({
   )
 }
 
-function MedicalRecordForm({ petId, onSubmit }: { petId: string; onSubmit: (record: any) => void }) {
+function MedicalRecordForm({
+  petId,
+  inventory,
+  onSubmit,
+}: {
+  petId: string
+  inventory: any[]
+  onSubmit: (record: any) => void
+}) {
+  const { toast } = useToast()
+  const [serviceType, setServiceType] = useState<string>("consulta")
+  const [selectedItems, setSelectedItems] = useState<Array<{ id: string; quantity: number }>>([])
+  const [currentItemId, setCurrentItemId] = useState<string>("")
+  const [currentQuantity, setCurrentQuantity] = useState<number>(1)
+
+  const handleAddItem = () => {
+    if (currentItemId && currentQuantity > 0) {
+      const existingIndex = selectedItems.findIndex((item) => item.id === currentItemId)
+      if (existingIndex >= 0) {
+        const updated = [...selectedItems]
+        updated[existingIndex].quantity += currentQuantity
+        setSelectedItems(updated)
+      } else {
+        setSelectedItems([...selectedItems, { id: currentItemId, quantity: currentQuantity }])
+      }
+      setCurrentItemId("")
+      setCurrentQuantity(1)
+    }
+  }
+
+  const handleRemoveItem = (itemId: string) => {
+    setSelectedItems(selectedItems.filter((item) => item.id !== itemId))
+  }
+
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     const formData = new FormData(e.currentTarget)
@@ -578,21 +659,44 @@ function MedicalRecordForm({ petId, onSubmit }: { petId: string; onSubmit: (reco
       petId,
       date: formData.get("date") as string,
       veterinarianId: "2",
+      serviceType: serviceType,
       reason: formData.get("reason") as string,
       diagnosis: formData.get("diagnosis") as string,
       treatment: formData.get("treatment") as string,
       observations: formData.get("observations") as string,
       nextVisit: formData.get("nextVisit") as string,
+      itemsUsed: selectedItems,
     }
     onSubmit(record)
+    toast({
+      title: `${serviceType === "consulta" ? "Consulta" : "Estudio"} guardado`,
+      description: `La ${serviceType === "consulta" ? "consulta" : "estudio"} se ha registrado correctamente`,
+    })
+  }
+
+  const availableItems = inventory.filter((item) => item.quantity > 0)
+  const getItemName = (itemId: string) => {
+    return inventory.find((item) => item.id === itemId)?.name || "Desconocido"
   }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-3 gap-4">
         <div className="space-y-2">
           <Label htmlFor="date">Fecha *</Label>
           <Input id="date" name="date" type="date" required defaultValue={new Date().toISOString().split("T")[0]} />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="serviceType">Tipo de Servicio *</Label>
+          <Select value={serviceType} onValueChange={setServiceType} required>
+            <SelectTrigger>
+              <SelectValue placeholder="Seleccionar tipo" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="consulta">Consulta</SelectItem>
+              <SelectItem value="estudio">Estudio</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
         <div className="space-y-2">
           <Label htmlFor="reason">Motivo de Consulta *</Label>
@@ -600,31 +704,89 @@ function MedicalRecordForm({ petId, onSubmit }: { petId: string; onSubmit: (reco
         </div>
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="diagnosis">Diagnóstico *</Label>
-        <Textarea id="diagnosis" name="diagnosis" required placeholder="Diagnóstico del veterinario..." rows={3} />
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="diagnosis">Diagnóstico *</Label>
+          <Textarea id="diagnosis" name="diagnosis" required placeholder="Diagnóstico del veterinario..." rows={4} />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="treatment">Tratamiento *</Label>
+          <Textarea id="treatment" name="treatment" required placeholder="Tratamiento prescrito..." rows={4} />
+        </div>
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="treatment">Tratamiento *</Label>
-        <Textarea id="treatment" name="treatment" required placeholder="Tratamiento prescrito..." rows={3} />
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="observations">Observaciones *</Label>
+          <Textarea id="observations" name="observations" required placeholder="Observaciones adicionales..." rows={3} />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="nextVisit">Próxima Visita</Label>
+          <Input id="nextVisit" name="nextVisit" type="date" />
+        </div>
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="observations">Observaciones *</Label>
-        <Textarea id="observations" name="observations" required placeholder="Observaciones adicionales..." rows={3} />
-      </div>
+      <div className="space-y-4 pt-4 border-t">
+        <div className="space-y-2">
+          <Label>Insumos y Artículos Utilizados</Label>
+          <div className="grid grid-cols-4 gap-2">
+            <Select value={currentItemId} onValueChange={setCurrentItemId}>
+              <SelectTrigger className="col-span-2">
+                <SelectValue placeholder="Seleccionar insumo o artículo" />
+              </SelectTrigger>
+              <SelectContent>
+                {availableItems.map((item) => (
+                  <SelectItem key={item.id} value={item.id}>
+                    {item.name} (Stock: {item.quantity})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Input
+              type="number"
+              min="1"
+              value={currentQuantity}
+              onChange={(e) => setCurrentQuantity(Number.parseInt(e.target.value) || 1)}
+              placeholder="Cantidad"
+            />
+            <Button type="button" onClick={handleAddItem} disabled={!currentItemId || currentQuantity <= 0}>
+              Agregar
+            </Button>
+          </div>
+        </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="nextVisit">Próxima Visita</Label>
-        <Input id="nextVisit" name="nextVisit" type="date" />
+        {selectedItems.length > 0 && (
+          <div className="space-y-2">
+            <Label>Items Seleccionados</Label>
+            <div className="border rounded-lg p-3 space-y-2 max-h-32 overflow-y-auto">
+              <div className="grid grid-cols-2 gap-2">
+                {selectedItems.map((item) => (
+                  <div key={item.id} className="flex items-center justify-between p-2 bg-muted rounded">
+                    <span className="text-sm">
+                      {getItemName(item.id)} x {item.quantity}
+                    </span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleRemoveItem(item.id)}
+                      className="h-6 w-6 p-0"
+                    >
+                      <FaTrash className="w-3 h-3 text-destructive" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="flex justify-end gap-2 pt-4">
         <Button type="button" variant="outline">
           Cancelar
         </Button>
-        <Button type="submit">Guardar Consulta</Button>
+        <Button type="submit">Guardar {serviceType === "consulta" ? "Consulta" : "Estudio"}</Button>
       </div>
     </form>
   )

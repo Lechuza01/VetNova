@@ -1,11 +1,12 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
+import { useAuth } from "@/contexts/auth-context"
 
 interface Emergency {
   id: string
@@ -24,14 +25,38 @@ interface Emergency {
 export function EmergencyForm({
   pets,
   clients,
+  currentUser,
   onSubmit,
 }: {
   pets: any[]
   clients: any[]
+  currentUser?: any
   onSubmit: (data: Omit<Emergency, "id" | "reportedBy" | "reportedAt">) => void
 }) {
-  const [selectedClientId, setSelectedClientId] = useState("")
-  const filteredPets = pets.filter((pet) => !selectedClientId || pet.clientId === selectedClientId)
+  const { user } = useAuth()
+  const activeUser = currentUser || user
+  const isClient = activeUser?.role === "cliente"
+  
+  // Si es cliente, obtener su clienteId
+  const clientIdForClient = isClient 
+    ? clients.find((c) => c.email === activeUser?.email || c.name === activeUser?.name)?.id || ""
+    : ""
+
+  const [selectedClientId, setSelectedClientId] = useState(isClient ? clientIdForClient : "")
+  const [selectedPetId, setSelectedPetId] = useState("")
+  
+  useEffect(() => {
+    if (isClient && clientIdForClient) {
+      setSelectedClientId(clientIdForClient)
+    }
+  }, [isClient, clientIdForClient])
+
+  const filteredPets = pets.filter((pet) => {
+    if (isClient) {
+      return pet.clientId === clientIdForClient
+    }
+    return !selectedClientId || pet.clientId === selectedClientId
+  })
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -51,24 +76,29 @@ export function EmergencyForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="clientId">Cliente *</Label>
-          <Select name="clientId" required onValueChange={setSelectedClientId}>
-            <SelectTrigger>
-              <SelectValue placeholder="Seleccionar cliente" />
-            </SelectTrigger>
-            <SelectContent>
-              {clients.map((client) => (
-                <SelectItem key={client.id} value={client.id}>
-                  {client.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-2">
+        {!isClient && (
+          <div className="space-y-2">
+            <Label htmlFor="clientId">Cliente *</Label>
+            <Select name="clientId" required onValueChange={setSelectedClientId} value={selectedClientId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Seleccionar cliente" />
+              </SelectTrigger>
+              <SelectContent>
+                {clients.map((client) => (
+                  <SelectItem key={client.id} value={client.id}>
+                    {client.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+        {isClient && (
+          <input type="hidden" name="clientId" value={clientIdForClient} />
+        )}
+        <div className={isClient ? "col-span-2" : "space-y-2"}>
           <Label htmlFor="petId">Mascota *</Label>
-          <Select name="petId" required disabled={!selectedClientId}>
+          <Select name="petId" required disabled={!selectedClientId && !isClient} value={selectedPetId} onValueChange={setSelectedPetId}>
             <SelectTrigger>
               <SelectValue placeholder="Seleccionar mascota" />
             </SelectTrigger>

@@ -2,9 +2,10 @@
 
 import type React from "react"
 import { createContext, useContext, useState } from "react"
-import type { Client, Pet, MedicalRecord, Appointment, InventoryItem, Hospitalization } from "@/lib/types"
+import type { Client, Pet, MedicalRecord, Appointment, InventoryItem, Hospitalization, Branch } from "@/lib/types"
 import { mockClients, mockPets, mockMedicalRecords, mockAppointments, mockInventory } from "@/lib/mock-data"
 import { mockHospitalizations } from "@/lib/hospitalization-data"
+import { mockBranches } from "@/lib/branches-data"
 
 interface ClinicContextType {
   clients: Client[]
@@ -13,6 +14,7 @@ interface ClinicContextType {
   appointments: Appointment[]
   inventory: InventoryItem[]
   hospitalizations: Hospitalization[]
+  branches: Branch[]
   addClient: (client: Client) => void
   updateClient: (id: string, client: Partial<Client>) => void
   deleteClient: (id: string) => void
@@ -31,6 +33,7 @@ interface ClinicContextType {
   dischargeHospitalization: (id: string, dischargeDate: string) => void
   addStudy: (hospitalizationId: string, study: Omit<Hospitalization["studies"][0], "id">) => void
   addVitalSigns: (hospitalizationId: string, vitalSigns: Hospitalization["vitalSigns"][0]) => void
+  updateBranch: (id: string, branch: Partial<Branch>) => void
 }
 
 const ClinicContext = createContext<ClinicContextType | undefined>(undefined)
@@ -42,6 +45,7 @@ export function ClinicProvider({ children }: { children: React.ReactNode }) {
   const [appointments, setAppointments] = useState<Appointment[]>(mockAppointments)
   const [inventory, setInventory] = useState<InventoryItem[]>(mockInventory)
   const [hospitalizations, setHospitalizations] = useState<Hospitalization[]>(mockHospitalizations)
+  const [branches, setBranches] = useState<Branch[]>(mockBranches)
 
   const addClient = (client: Client) => {
     setClients((prev) => [...prev, client])
@@ -143,6 +147,10 @@ export function ClinicProvider({ children }: { children: React.ReactNode }) {
     )
   }
 
+  const updateBranch = (id: string, updatedBranch: Partial<Branch>) => {
+    setBranches((prev) => prev.map((b) => (b.id === id ? { ...b, ...updatedBranch } : b)))
+  }
+
   return (
     <ClinicContext.Provider
       value={{
@@ -152,6 +160,7 @@ export function ClinicProvider({ children }: { children: React.ReactNode }) {
         appointments,
         inventory,
         hospitalizations,
+        branches,
         addClient,
         updateClient,
         deleteClient,
@@ -170,6 +179,7 @@ export function ClinicProvider({ children }: { children: React.ReactNode }) {
         dischargeHospitalization,
         addStudy,
         addVitalSigns,
+        updateBranch,
       }}
     >
       {children}

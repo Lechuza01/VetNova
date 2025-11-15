@@ -34,18 +34,18 @@ import {
 } from "react-icons/fa"
 
 const menuItems = [
-  { href: "/dashboard/users", label: "Usuarios", icon: FaUsers },
-  { href: "/dashboard/clients", label: "Clientes", icon: FaUserFriends },
-  { href: "/dashboard/pets", label: "Mascotas", icon: FaDog },
-  { href: "/dashboard/appointments", label: "Turnos", icon: FaCalendarAlt },
-  { href: "/dashboard/hospitalizations", label: "Internaciones", icon: FaHospital },
-  { href: "/dashboard/emergencies", label: "Emergencias", icon: FaExclamationTriangle },
-  { href: "/dashboard/marketplace", label: "Marketplace", icon: FaStore },
-  { href: "/dashboard/community", label: "Comunidad", icon: FaComments },
-  { href: "/dashboard/reports", label: "Reportes", icon: FaChartBar },
-  { href: "/dashboard/articles", label: "Artículos", icon: FaBoxes },
-  { href: "/dashboard/supplies", label: "Insumos", icon: FaCapsules },
-  { href: "/dashboard/admin", label: "Admin", icon: FaUserShield, adminOnly: true },
+  { href: "/dashboard/users", label: "Usuarios", icon: FaUsers, roles: ["admin", "veterinarian", "receptionist"] },
+  { href: "/dashboard/clients", label: "Clientes", icon: FaUserFriends, roles: ["admin", "veterinarian", "receptionist"] },
+  { href: "/dashboard/pets", label: "Mascotas", icon: FaDog, roles: ["admin", "veterinarian", "receptionist", "cliente"] },
+  { href: "/dashboard/appointments", label: "Turnos", icon: FaCalendarAlt, roles: ["admin", "veterinarian", "receptionist", "cliente"] },
+  { href: "/dashboard/hospitalizations", label: "Internaciones", icon: FaHospital, roles: ["admin", "veterinarian", "receptionist"] },
+  { href: "/dashboard/emergencies", label: "Emergencias", icon: FaExclamationTriangle, roles: ["admin", "veterinarian", "receptionist", "cliente"] },
+  { href: "/dashboard/marketplace", label: "Marketplace", icon: FaStore, roles: ["admin", "veterinarian", "receptionist", "cliente"] },
+  { href: "/dashboard/community", label: "Comunidad", icon: FaComments, roles: ["admin", "veterinarian", "receptionist", "cliente"] },
+  { href: "/dashboard/reports", label: "Reportes", icon: FaChartBar, roles: ["admin", "veterinarian", "receptionist"] },
+  { href: "/dashboard/articles", label: "Artículos", icon: FaBoxes, roles: ["admin", "veterinarian", "receptionist"] },
+  { href: "/dashboard/supplies", label: "Insumos", icon: FaCapsules, roles: ["admin", "veterinarian", "receptionist"] },
+  { href: "/dashboard/admin", label: "Admin", icon: FaUserShield, roles: ["admin"] },
 ]
 
 function SidebarContent({ onLinkClick, onToggleCollapse }: { onLinkClick?: () => void; onToggleCollapse?: () => void }) {
@@ -73,6 +73,9 @@ function SidebarContent({ onLinkClick, onToggleCollapse }: { onLinkClick?: () =>
 
       <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
         {menuItems.map((item) => {
+          // Filtrar items según el rol del usuario
+          if (user?.role && item.roles && !item.roles.includes(user.role)) return null
+          // Mantener compatibilidad con adminOnly
           if (item.adminOnly && user?.role !== "admin") return null
 
           const Icon = item.icon
@@ -160,6 +163,9 @@ export function Sidebar() {
       {!collapsed && (
         <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
           {menuItems.map((item) => {
+            // Filtrar items según el rol del usuario
+            if (user?.role && item.roles && !item.roles.includes(user.role)) return null
+            // Mantener compatibilidad con adminOnly
             if (item.adminOnly && user?.role !== "admin") return null
 
             const Icon = item.icon
@@ -186,6 +192,9 @@ export function Sidebar() {
       {collapsed && (
         <nav className="flex-1 p-2 space-y-1 overflow-y-auto">
           {menuItems.map((item) => {
+            // Filtrar items según el rol del usuario
+            if (user?.role && item.roles && !item.roles.includes(user.role)) return null
+            // Mantener compatibilidad con adminOnly
             if (item.adminOnly && user?.role !== "admin") return null
 
             const Icon = item.icon

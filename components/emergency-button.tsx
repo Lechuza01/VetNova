@@ -71,7 +71,7 @@ export function EmergencyButton() {
           <DialogTitle>Registrar Emergencia</DialogTitle>
           <DialogDescription>Completa los datos de la emergencia</DialogDescription>
         </DialogHeader>
-        <EmergencyForm pets={pets} clients={clients} onSubmit={handleSubmit} />
+        <EmergencyForm pets={pets} clients={clients} currentUser={user} onSubmit={handleSubmit} />
       </DialogContent>
     </Dialog>
   )

@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -28,9 +28,10 @@ import { useNotifications } from "@/contexts/notifications-context"
 import { mockUsers } from "@/lib/auth"
 import type { User } from "@/lib/types"
 import { useToast } from "@/hooks/use-toast"
+import type { Branch } from "@/lib/types"
 
 export default function AppointmentsPage() {
-  const { appointments, pets, clients, addAppointment, updateAppointment, deleteAppointment } = useClinic()
+  const { appointments, pets, clients, branches, addAppointment, updateAppointment, deleteAppointment } = useClinic()
   const { user: currentUser } = useAuth()
   const [selectedDate, setSelectedDate] = useState<Date>(new Date())
   const [filterStatus, setFilterStatus] = useState<string>("all")
@@ -63,6 +64,10 @@ export default function AppointmentsPage() {
   const getVeterinarianName = (vetId: string) => {
     const vet = professionals.find((p) => p.id === vetId)
     return vet?.name || "Sin asignar"
+  }
+  const getBranchName = (branchId: string) => {
+    const branch = branches.find((b) => b.id === branchId)
+    return branch?.name || "Sin asignar"
   }
 
   const filteredAppointments = appointments.filter((apt) => {
@@ -99,7 +104,7 @@ export default function AppointmentsPage() {
                 <DialogTitle>Agendar Nuevo Turno</DialogTitle>
                 <DialogDescription>Completa los datos de la cita</DialogDescription>
               </DialogHeader>
-              <AppointmentForm pets={pets} clients={clients} professionals={professionals} onSubmit={addAppointment} />
+              <AppointmentForm pets={pets} clients={clients} professionals={professionals} branches={branches} onSubmit={addAppointment} />
             </DialogContent>
         </Dialog>
       </div>
@@ -173,6 +178,7 @@ export default function AppointmentsPage() {
                       <TableHead>Hora</TableHead>
                       <TableHead>Mascota</TableHead>
                       <TableHead>Cliente</TableHead>
+                      <TableHead>Sucursal</TableHead>
                       <TableHead>Veterinario/Profesional</TableHead>
                       <TableHead>Motivo</TableHead>
                       <TableHead>Estado</TableHead>
@@ -186,6 +192,7 @@ export default function AppointmentsPage() {
                         <TableCell className="font-medium">{appointment.time}</TableCell>
                         <TableCell>{getPetName(appointment.petId)}</TableCell>
                         <TableCell>{getClientName(appointment.clientId)}</TableCell>
+                        <TableCell>{getBranchName(appointment.branchId)}</TableCell>
                         <TableCell>
                           {currentUser?.role === "admin" && editingVet === appointment.id ? (
                             <Select
@@ -302,7 +309,7 @@ export default function AppointmentsPage() {
                             </p>
                             <p className="text-sm text-muted-foreground">{appointment.reason}</p>
                             <p className="text-xs text-muted-foreground mt-1">
-                              Veterinario: {getVeterinarianName(appointment.veterinarianId)}
+                              Sucursal: {getBranchName(appointment.branchId)} | Veterinario: {getVeterinarianName(appointment.veterinarianId)}
                             </p>
                           </div>
                         </div>
@@ -328,15 +335,18 @@ function AppointmentForm({
   pets,
   clients,
   professionals,
+  branches,
   onSubmit,
 }: {
   pets: any[]
   clients: any[]
   professionals: User[]
+  branches: Branch[]
   onSubmit: (appointment: any) => void
 }) {
   const [selectedPet, setSelectedPet] = useState<string>("")
   const [selectedVeterinarian, setSelectedVeterinarian] = useState<string>("")
+  const [selectedBranch, setSelectedBranch] = useState<string>("")
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -347,6 +357,7 @@ function AppointmentForm({
       petId: selectedPet,
       clientId: pet?.clientId || "",
       veterinarianId: selectedVeterinarian || professionals[0]?.id || "",
+      branchId: selectedBranch || branches[0]?.id || "",
       date: formData.get("date") as string,
       time: formData.get("time") as string,
       reason: formData.get("reason") as string,
@@ -396,20 +407,37 @@ function AppointmentForm({
         </div>
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="veterinarianId">Veterinario/Profesional *</Label>
-        <Select value={selectedVeterinarian} onValueChange={setSelectedVeterinarian} required>
-          <SelectTrigger>
-            <SelectValue placeholder="Seleccionar veterinario" />
-          </SelectTrigger>
-          <SelectContent>
-            {professionals.map((prof) => (
-              <SelectItem key={prof.id} value={prof.id}>
-                {prof.name} ({prof.role === "admin" ? "Administrador" : "Veterinario"})
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="branchId">Sucursal *</Label>
+          <Select value={selectedBranch} onValueChange={setSelectedBranch} required>
+            <SelectTrigger>
+              <SelectValue placeholder="Seleccionar sucursal" />
+            </SelectTrigger>
+            <SelectContent>
+              {branches.filter((b) => b.isActive).map((branch) => (
+                <SelectItem key={branch.id} value={branch.id}>
+                  {branch.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="veterinarianId">Veterinario/Profesional *</Label>
+          <Select value={selectedVeterinarian} onValueChange={setSelectedVeterinarian} required>
+            <SelectTrigger>
+              <SelectValue placeholder="Seleccionar veterinario" />
+            </SelectTrigger>
+            <SelectContent>
+              {professionals.map((prof) => (
+                <SelectItem key={prof.id} value={prof.id}>
+                  {prof.name} ({prof.role === "admin" ? "Administrador" : "Veterinario"})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       <div className="space-y-2">
@@ -446,13 +474,16 @@ function ClientAvailabilityView({
 }) {
   const { user: currentUser } = useAuth()
   const { addNotification } = useNotifications()
+  const { branches } = useClinic()
   const [selectedDate, setSelectedDate] = useState<Date>(new Date())
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<string>("")
   const [selectedPet, setSelectedPet] = useState<string>("")
+  const [selectedService, setSelectedService] = useState<"consulta" | "internacion" | "urgencias">("consulta")
+  const [selectedBranch, setSelectedBranch] = useState<string>("")
   const [reason, setReason] = useState<string>("")
   const [showRequestForm, setShowRequestForm] = useState(false)
   const [showEmailDialog, setShowEmailDialog] = useState(false)
-  const [appointmentDetails, setAppointmentDetails] = useState<{ date: string; time: string; pet: string; reason: string } | null>(null)
+  const [appointmentDetails, setAppointmentDetails] = useState<{ date: string; time: string; pet: string; reason: string; branch: string } | null>(null)
   const { toast } = useToast()
 
   // Obtener lista de veterinarios y profesionales
@@ -467,6 +498,21 @@ function ClientAvailabilityView({
     return client && (client.email === currentUser?.email || client.name === currentUser?.name)
   })
 
+  // Filtrar sucursales según el servicio seleccionado
+  const availableBranches = branches.filter((branch) => {
+    if (!branch.isActive) return false
+    return branch.services.includes(selectedService)
+  })
+
+  // Resetear sucursal cuando cambia el servicio
+  useEffect(() => {
+    if (availableBranches.length > 0 && !availableBranches.find((b) => b.id === selectedBranch)) {
+      setSelectedBranch(availableBranches[0].id)
+    } else if (availableBranches.length === 0) {
+      setSelectedBranch("")
+    }
+  }, [selectedService, availableBranches.length, selectedBranch])
+
   // Horarios disponibles: de 9:00 a 18:00 con intervalos de 30 minutos
   const generateTimeSlots = () => {
     const slots: string[] = []
@@ -479,27 +525,33 @@ function ClientAvailabilityView({
 
   const timeSlots = generateTimeSlots()
 
-  // Obtener turnos ocupados para una fecha específica
-  const getOccupiedSlots = (date: string) => {
+  // Obtener turnos ocupados para una fecha específica y sucursal
+  const getOccupiedSlots = (date: string, branchId: string) => {
     const dateAppointments = appointments.filter(
-      (apt) => apt.date === date && (apt.status === "pending" || apt.status === "confirmed"),
+      (apt) =>
+        apt.date === date &&
+        apt.branchId === branchId &&
+        (apt.status === "pending" || apt.status === "confirmed"),
     )
     return dateAppointments.map((apt) => apt.time)
   }
 
-  // Obtener horarios disponibles para la fecha seleccionada
-  const getAvailableSlots = (date: string) => {
-    const occupiedSlots = getOccupiedSlots(date)
+  // Obtener horarios disponibles para la fecha seleccionada y sucursal
+  const getAvailableSlots = (date: string, branchId: string) => {
+    if (!branchId) return []
+    const occupiedSlots = getOccupiedSlots(date, branchId)
     return timeSlots.filter((slot) => !occupiedSlots.includes(slot))
   }
 
-  const availableSlots = getAvailableSlots(selectedDate.toISOString().split("T")[0])
+  const availableSlots = selectedBranch
+    ? getAvailableSlots(selectedDate.toISOString().split("T")[0], selectedBranch)
+    : []
 
-  // Verificar si una fecha tiene disponibilidad
+  // Verificar si una fecha tiene disponibilidad para alguna sucursal
   const hasAvailability = (date: Date) => {
+    if (availableBranches.length === 0) return false
     const dateStr = date.toISOString().split("T")[0]
-    const available = getAvailableSlots(dateStr)
-    return available.length > 0
+    return availableBranches.some((branch) => getAvailableSlots(dateStr, branch.id).length > 0)
   }
 
   // Fechas no disponibles (por ejemplo, días festivos, días de cierre, etc.)
@@ -538,13 +590,21 @@ function ClientAvailabilityView({
   }
 
   const handleTimeSlotClick = (time: string) => {
+    if (!selectedBranch) {
+      toast({
+        title: "Error",
+        description: "Por favor selecciona una sucursal primero",
+        variant: "destructive",
+      })
+      return
+    }
     setSelectedTimeSlot(time)
     setShowRequestForm(true)
   }
 
   const handleRequestAppointment = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!selectedPet || !selectedTimeSlot || !reason) {
+    if (!selectedPet || !selectedTimeSlot || !reason || !selectedBranch) {
       toast({
         title: "Error",
         description: "Por favor completa todos los campos requeridos",
@@ -554,12 +614,14 @@ function ClientAvailabilityView({
     }
 
     const pet = pets.find((p) => p.id === selectedPet)
+    const branch = branches.find((b) => b.id === selectedBranch)
     const appointmentId = Date.now().toString()
     const appointment = {
       id: appointmentId,
       petId: selectedPet,
       clientId: pet?.clientId || "",
       veterinarianId: professionals[0]?.id || "", // Asignar automáticamente al primer veterinario disponible
+      branchId: selectedBranch,
       date: selectedDate.toISOString().split("T")[0],
       time: selectedTimeSlot,
       reason: reason,
@@ -572,7 +634,7 @@ function ClientAvailabilityView({
     // Crear notificación para el cliente
     addNotification({
       title: "Turno Reservado",
-      message: `Tu turno para ${pet?.name || "tu mascota"} el ${selectedDate.toLocaleDateString()} a las ${selectedTimeSlot} ha sido reservado correctamente. Motivo: ${reason}`,
+      message: `Tu turno para ${pet?.name || "tu mascota"} el ${selectedDate.toLocaleDateString()} a las ${selectedTimeSlot} en ${branch?.name || "la sucursal"} ha sido reservado correctamente. Motivo: ${reason}`,
       type: "appointment",
       appointmentId: appointmentId,
     })
@@ -583,6 +645,7 @@ function ClientAvailabilityView({
       time: selectedTimeSlot,
       pet: pet?.name || "",
       reason: reason,
+      branch: branch?.name || "",
     })
     setShowEmailDialog(true)
 
@@ -597,8 +660,49 @@ function ClientAvailabilityView({
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold text-foreground">Solicitar Turno</h1>
-        <p className="text-muted-foreground mt-1">Selecciona una fecha y horario disponible</p>
+        <p className="text-muted-foreground mt-1">Selecciona un servicio, sucursal, fecha y horario disponible</p>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Seleccionar Servicio y Sucursal</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="service">Tipo de Servicio *</Label>
+              <Select value={selectedService} onValueChange={(value: "consulta" | "internacion" | "urgencias") => setSelectedService(value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar servicio" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="consulta">Consulta Veterinaria</SelectItem>
+                  <SelectItem value="internacion">Internación</SelectItem>
+                  <SelectItem value="urgencias">Urgencias</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="branch">Sucursal *</Label>
+              <Select value={selectedBranch} onValueChange={setSelectedBranch} disabled={availableBranches.length === 0}>
+                <SelectTrigger>
+                  <SelectValue placeholder={availableBranches.length === 0 ? "No hay sucursales disponibles" : "Seleccionar sucursal"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableBranches.map((branch) => (
+                    <SelectItem key={branch.id} value={branch.id}>
+                      {branch.name} {branch.is24Hours && "(24hs)"}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {availableBranches.length === 0 && (
+                <p className="text-sm text-muted-foreground">No hay sucursales disponibles para este servicio</p>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       <div className="grid md:grid-cols-[350px_1fr] gap-6">
         <Card>
@@ -754,6 +858,9 @@ function ClientAvailabilityView({
                 </p>
                 <p>
                   <span className="font-medium">Motivo:</span> {appointmentDetails?.reason}
+                </p>
+                <p>
+                  <span className="font-medium">Sucursal:</span> {appointmentDetails?.branch}
                 </p>
               </div>
             </div>

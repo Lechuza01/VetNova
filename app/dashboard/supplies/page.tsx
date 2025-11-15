@@ -17,13 +17,18 @@ import {
 } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import { FaPlus, FaEdit, FaTrash, FaSearch, FaExclamationTriangle } from "react-icons/fa"
 import { useClinic } from "@/contexts/clinic-context"
+import { useToast } from "@/hooks/use-toast"
 
 export default function SuppliesPage() {
   const { inventory, addInventoryItem, deleteInventoryItem } = useClinic()
+  const { toast } = useToast()
   const [searchTerm, setSearchTerm] = useState("")
   const [filterCategory, setFilterCategory] = useState<string>("all")
+  const [dialogOpen, setDialogOpen] = useState(false)
 
   const supplies = inventory.filter((item) => ["supply", "food"].includes(item.category))
 
@@ -50,7 +55,7 @@ export default function SuppliesPage() {
           <h1 className="text-3xl font-bold text-foreground">Insumos</h1>
           <p className="text-muted-foreground mt-1">Gestión de insumos y alimentos</p>
         </div>
-        <Dialog>
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
             <Button>
               <FaPlus className="mr-2" />
@@ -62,7 +67,18 @@ export default function SuppliesPage() {
               <DialogTitle>Registrar Nuevo Insumo</DialogTitle>
               <DialogDescription>Completa los datos del insumo</DialogDescription>
             </DialogHeader>
-            <InventoryForm onSubmit={addInventoryItem} categories={["supply", "food"]} />
+            <InventoryForm
+              onSubmit={(item) => {
+                addInventoryItem(item)
+                setDialogOpen(false)
+                toast({
+                  title: "Insumo registrado",
+                  description: "El insumo se ha registrado correctamente",
+                })
+              }}
+              onCancel={() => setDialogOpen(false)}
+              categories={["supply", "food"]}
+            />
           </DialogContent>
         </Dialog>
       </div>
@@ -172,7 +188,15 @@ export default function SuppliesPage() {
   )
 }
 
-function InventoryForm({ onSubmit, categories }: { onSubmit: (item: any) => void; categories: string[] }) {
+function InventoryForm({
+  onSubmit,
+  onCancel,
+  categories,
+}: {
+  onSubmit: (item: any) => void
+  onCancel?: () => void
+  categories: string[]
+}) {
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     const formData = new FormData(e.currentTarget)
@@ -190,5 +214,64 @@ function InventoryForm({ onSubmit, categories }: { onSubmit: (item: any) => void
     onSubmit(item)
   }
 
-  return <form onSubmit={handleSubmit} className="space-y-4"></form>
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="name">Nombre *</Label>
+          <Input id="name" name="name" required placeholder="Nombre del insumo" />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="category">Categoría *</Label>
+          <Select name="category" required>
+            <SelectTrigger>
+              <SelectValue placeholder="Seleccionar categoría" />
+            </SelectTrigger>
+            <SelectContent>
+              {categories.includes("supply") && <SelectItem value="supply">Insumo</SelectItem>}
+              {categories.includes("food") && <SelectItem value="food">Alimento</SelectItem>}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-3 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="quantity">Cantidad *</Label>
+          <Input id="quantity" name="quantity" type="number" required placeholder="0" />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="minStock">Stock Mínimo *</Label>
+          <Input id="minStock" name="minStock" type="number" required placeholder="0" />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="price">Precio (€) *</Label>
+          <Input id="price" name="price" type="number" step="0.01" required placeholder="0.00" />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="supplier">Proveedor</Label>
+          <Input id="supplier" name="supplier" placeholder="Nombre del proveedor" />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="expiryDate">Fecha de Vencimiento</Label>
+          <Input id="expiryDate" name="expiryDate" type="date" />
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="notes">Notas</Label>
+        <Textarea id="notes" name="notes" placeholder="Información adicional..." rows={3} />
+      </div>
+
+      <div className="flex justify-end gap-2 pt-4">
+        <Button type="button" variant="outline" onClick={onCancel}>
+          Cancelar
+        </Button>
+        <Button type="submit">Registrar Insumo</Button>
+      </div>
+    </form>
+  )
 }

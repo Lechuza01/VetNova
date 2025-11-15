@@ -74,7 +74,15 @@ export default function EmergenciesPage() {
   const [filterStatus, setFilterStatus] = useState<"all" | Emergency["status"]>("all")
   const [newDialogOpen, setNewDialogOpen] = useState(false)
 
-  const filteredEmergencies = emergencies.filter((e) => {
+  // Si es cliente, solo mostrar sus propias emergencias
+  const clientEmergencies = user?.role === "cliente"
+    ? emergencies.filter((e) => {
+        const client = clients.find((c) => c.id === e.clientId)
+        return client && (client.email === user.email || client.name === user.name)
+      })
+    : emergencies
+
+  const filteredEmergencies = clientEmergencies.filter((e) => {
     if (filterStatus === "all") return true
     return e.status === filterStatus
   })
@@ -129,7 +137,9 @@ export default function EmergenciesPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-foreground">Emergencias</h1>
-          <p className="text-sm md:text-base text-muted-foreground mt-1">Gestión de casos de emergencia</p>
+          <p className="text-sm md:text-base text-muted-foreground mt-1">
+            {user?.role === "cliente" ? "Solicitar emergencia" : "Gestión de casos de emergencia"}
+          </p>
         </div>
         <Dialog open={newDialogOpen} onOpenChange={setNewDialogOpen}>
           <DialogTrigger asChild>
@@ -143,13 +153,22 @@ export default function EmergenciesPage() {
               <DialogTitle>Registrar Nueva Emergencia</DialogTitle>
               <DialogDescription>Completa los datos de la emergencia</DialogDescription>
             </DialogHeader>
-            <EmergencyForm pets={pets} clients={clients} onSubmit={handleAddEmergency} />
+            <EmergencyForm 
+              pets={user?.role === "cliente" ? pets.filter((pet) => {
+                const client = clients.find((c) => c.id === pet.clientId)
+                return client && (client.email === user.email || client.name === user.name)
+              }) : pets} 
+              clients={clients} 
+              currentUser={user}
+              onSubmit={handleAddEmergency} 
+            />
           </DialogContent>
         </Dialog>
       </div>
 
-      {/* Estadísticas */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      {/* Estadísticas - Solo para admin, veterinario y recepcionista */}
+      {user?.role !== "cliente" && (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Críticas</CardTitle>
@@ -197,46 +216,63 @@ export default function EmergenciesPage() {
           </CardContent>
         </Card>
       </div>
+      )}
 
-      {/* Filtros */}
+      {/* Filtros - Solo para admin, veterinario y recepcionista */}
+      {user?.role !== "cliente" && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2 flex-wrap">
+              <Button
+                variant={filterStatus === "all" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setFilterStatus("all")}
+              >
+                Todas
+              </Button>
+              <Button
+                variant={filterStatus === "pending" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setFilterStatus("pending")}
+              >
+                Pendientes
+              </Button>
+              <Button
+                variant={filterStatus === "in_progress" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setFilterStatus("in_progress")}
+              >
+                En Proceso
+              </Button>
+              <Button
+                variant={filterStatus === "resolved" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setFilterStatus("resolved")}
+              >
+                Resueltas
+              </Button>
+            </div>
+          </CardHeader>
+        </Card>
+      )}
+
+      {/* Lista de emergencias - Todos pueden ver sus propias emergencias */}
       <Card>
         <CardHeader>
-          <div className="flex items-center gap-2 flex-wrap">
-            <Button
-              variant={filterStatus === "all" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setFilterStatus("all")}
-            >
-              Todas
-            </Button>
-            <Button
-              variant={filterStatus === "pending" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setFilterStatus("pending")}
-            >
-              Pendientes
-            </Button>
-            <Button
-              variant={filterStatus === "in_progress" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setFilterStatus("in_progress")}
-            >
-              En Proceso
-            </Button>
-            <Button
-              variant={filterStatus === "resolved" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setFilterStatus("resolved")}
-            >
-              Resueltas
-            </Button>
-          </div>
+          <CardTitle>
+            {user?.role === "cliente" ? "Mis Emergencias" : "Lista de Emergencias"}
+          </CardTitle>
+          <CardDescription>
+            {user?.role === "cliente" 
+              ? "Tus emergencias registradas"
+              : "Todas las emergencias del sistema"}
+          </CardDescription>
         </CardHeader>
         <CardContent>
           {filteredEmergencies.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
               <FaExclamationTriangle className="w-16 h-16 mx-auto mb-4 opacity-50" />
-              <p>No hay emergencias registradas</p>
+              <p>{user?.role === "cliente" ? "No has registrado emergencias" : "No hay emergencias registradas"}</p>
             </div>
           ) : (
             <div className="space-y-4">
@@ -269,10 +305,12 @@ export default function EmergenciesPage() {
                             {emergency.assignedTo && <span>Asignado a: {emergency.assignedTo}</span>}
                           </div>
                         </div>
-                        <Button variant="outline" size="sm">
-                          <FaPhone className="w-4 h-4 mr-2" />
-                          Llamar
-                        </Button>
+                        {user?.role !== "cliente" && (
+                          <Button variant="outline" size="sm">
+                            <FaPhone className="w-4 h-4 mr-2" />
+                            Llamar
+                          </Button>
+                        )}
                       </div>
                     </CardHeader>
                     <CardContent className="space-y-4">

@@ -54,11 +54,36 @@ export interface MedicalRecord {
   attachments?: string[]
 }
 
+export interface Branch {
+  id: string
+  name: string
+  address: string
+  city: string
+  postalCode: string
+  phone: string
+  email: string
+  type: "veterinaria_shop" | "veterinaria_clinica"
+  services: Array<"consulta" | "shop" | "internacion" | "urgencias">
+  is24Hours: boolean
+  openingHours: {
+    monday: string
+    tuesday: string
+    wednesday: string
+    thursday: string
+    friday: string
+    saturday: string
+    sunday: string
+  }
+  chiefVeterinarianId: string
+  isActive: boolean
+}
+
 export interface Appointment {
   id: string
   petId: string
   clientId: string
   veterinarianId: string
+  branchId: string
   date: string
   time: string
   reason: string
