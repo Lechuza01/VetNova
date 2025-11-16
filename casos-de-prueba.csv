@@ -1,0 +1,73 @@
+ID,Módulo,Caso de Prueba,Descripción,Pasos a Seguir,Resultado Esperado,Estado,Notas
+CP-001,Spa y Peluquería,Reservar turno de Peluquería,Verificar que un cliente pueda reservar un turno de peluquería,"1. Iniciar sesión como cliente
+2. Ir a Spa & Peluquería
+3. Seleccionar servicio ""Peluquería""
+4. Seleccionar sucursal (Centro, Palermo o Belgrano)
+5. Seleccionar fecha disponible
+6. Seleccionar horario disponible
+7. Seleccionar mascota
+8. Completar formulario y confirmar",Se crea el turno correctamente, se muestra pop-up de confirmación de email y se genera notificación,Pendiente,
+CP-002,Spa y Peluquería,Reservar turno de Spa,Verificar que un cliente pueda reservar un turno de spa,"1. Iniciar sesión como cliente
+2. Ir a Spa & Peluquería
+3. Seleccionar servicio ""Spa""
+4. Seleccionar sucursal disponible
+5. Seleccionar fecha disponible
+6. Seleccionar horario disponible
+7. Seleccionar mascota
+8. Agregar notas opcionales
+9. Confirmar reserva",Se crea el turno de spa correctamente con todas las validaciones,Pendiente,
+CP-003,Spa y Peluquería,Validar filtro de sucursales,Verificar que solo se muestren sucursales con shop,"1. Iniciar sesión como cliente
+2. Ir a Spa & Peluquería
+3. Verificar dropdown de sucursales",Solo aparecen Centro, Palermo y Belgrano (las que tienen shop),Pendiente,
+CP-004,Spa y Peluquería,Validar horarios ocupados,Verificar que no se puedan seleccionar horarios ya ocupados,"1. Reservar un turno para una fecha/hora específica
+2. Intentar reservar otro turno para la misma fecha/hora y sucursal",El horario ocupado no aparece disponible en el calendario,Pendiente,
+CP-005,Spa y Peluquería,Validar acceso restringido,Verificar que solo clientes puedan acceder,"1. Iniciar sesión como admin/veterinario/recepcionista
+2. Intentar acceder a /dashboard/spa-grooming",Se muestra mensaje de que la sección es solo para clientes,Pendiente,
+CP-006,Turnos,Reservar turno de consulta,Verificar que un cliente pueda solicitar un turno de consulta,"1. Iniciar sesión como cliente
+2. Ir a Turnos
+3. Seleccionar tipo de servicio ""Consulta Veterinaria""
+4. Seleccionar sucursal disponible
+5. Seleccionar fecha disponible
+6. Seleccionar horario disponible
+7. Seleccionar mascota
+8. Ingresar motivo de consulta
+9. Confirmar solicitud",Se crea el turno con estado ""pending"", se muestra pop-up de email y notificación,Pendiente,
+CP-007,Turnos,Reservar turno de urgencias,Verificar que un cliente pueda solicitar un turno de urgencias,"1. Iniciar sesión como cliente
+2. Ir a Turnos
+3. Seleccionar tipo de servicio ""Urgencias""
+4. Verificar que solo aparezcan sucursales con servicio de urgencias
+5. Seleccionar sucursal disponible
+6. Seleccionar fecha y horario
+7. Completar formulario y confirmar",Solo aparecen sucursales con servicio de urgencias (Clínica Norte y Clínica Sur),Pendiente,
+CP-008,Turnos,Asignar veterinario (Admin),Verificar que un admin pueda asignar veterinario a un turno,"1. Iniciar sesión como admin
+2. Ir a Turnos
+3. Ver lista de turnos
+4. Hacer clic en botón de editar veterinario
+5. Seleccionar veterinario del dropdown
+6. Confirmar",El veterinario se asigna correctamente al turno,Pendiente,
+CP-009,Turnos,Ver turnos en calendario (Admin),Verificar vista de calendario para admin,"1. Iniciar sesión como admin
+2. Ir a Turnos
+3. Cambiar a pestaña ""Calendario""
+4. Seleccionar diferentes fechas",Se muestran los turnos del día seleccionado con toda la información,Pendiente,
+CP-010,Turnos,Validar filtro por servicio,Verificar que las sucursales se filtren según el servicio seleccionado,"1. Iniciar sesión como cliente
+2. Ir a Turnos
+3. Seleccionar ""Internación""
+4. Verificar dropdown de sucursales",Solo aparecen sucursales con servicio de internación,Pendiente,
+CP-011,Turnos,Editar turno desde perfil (Cliente),Verificar que un cliente pueda editar su turno,"1. Iniciar sesión como cliente
+2. Ir a Mi Perfil
+3. En sección ""Mis Turnos"", hacer clic en editar
+4. Modificar fecha, hora o motivo
+5. Guardar cambios",Los cambios se guardan correctamente y se reflejan en la lista,Pendiente,
+CP-012,Turnos,Cancelar turno (Cliente),Verificar que un cliente pueda cancelar su turno,"1. Iniciar sesión como cliente
+2. Ir a Mi Perfil
+3. En sección ""Mis Turnos"", hacer clic en cancelar
+4. Confirmar cancelación",El turno cambia su estado a ""cancelled"",Pendiente,
+CP-013,Turnos,Validar fechas pasadas,Verificar que no se puedan seleccionar fechas pasadas,"1. Iniciar sesión como cliente
+2. Ir a Turnos o Spa & Peluquería
+3. Intentar seleccionar una fecha pasada en el calendario",Las fechas pasadas aparecen deshabilitadas y no se pueden seleccionar,Pendiente,
+CP-014,Turnos,Validar horarios disponibles,Verificar que solo se muestren horarios disponibles,"1. Reservar varios turnos para una fecha específica
+2. Verificar que esos horarios no aparezcan disponibles para otros turnos",Los horarios ocupados no aparecen en la lista de disponibles,Pendiente,
+CP-015,Spa y Peluquería,Validar notificación,Verificar que se genere notificación al reservar turno,"1. Iniciar sesión como cliente
+2. Reservar un turno de spa o peluquería
+3. Verificar icono de campana en el header",Aparece notificación con el círculo rojo indicando nueva notificación,Pendiente,
+
