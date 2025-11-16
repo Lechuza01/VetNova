@@ -2,7 +2,7 @@
 
 import type React from "react"
 import { createContext, useContext, useState } from "react"
-import type { Client, Pet, MedicalRecord, Appointment, InventoryItem, Hospitalization, Branch } from "@/lib/types"
+import type { Client, Pet, MedicalRecord, Appointment, InventoryItem, Hospitalization, Branch, SpaGroomingAppointment } from "@/lib/types"
 import { mockClients, mockPets, mockMedicalRecords, mockAppointments, mockInventory } from "@/lib/mock-data"
 import { mockHospitalizations } from "@/lib/hospitalization-data"
 import { mockBranches } from "@/lib/branches-data"
@@ -12,6 +12,7 @@ interface ClinicContextType {
   pets: Pet[]
   medicalRecords: MedicalRecord[]
   appointments: Appointment[]
+  spaGroomingAppointments: SpaGroomingAppointment[]
   inventory: InventoryItem[]
   hospitalizations: Hospitalization[]
   branches: Branch[]
@@ -25,6 +26,9 @@ interface ClinicContextType {
   addAppointment: (appointment: Appointment) => void
   updateAppointment: (id: string, appointment: Partial<Appointment>) => void
   deleteAppointment: (id: string) => void
+  addSpaGroomingAppointment: (appointment: SpaGroomingAppointment) => void
+  updateSpaGroomingAppointment: (id: string, appointment: Partial<SpaGroomingAppointment>) => void
+  deleteSpaGroomingAppointment: (id: string) => void
   addInventoryItem: (item: InventoryItem) => void
   updateInventoryItem: (id: string, item: Partial<InventoryItem>) => void
   deleteInventoryItem: (id: string) => void
@@ -43,6 +47,7 @@ export function ClinicProvider({ children }: { children: React.ReactNode }) {
   const [pets, setPets] = useState<Pet[]>(mockPets)
   const [medicalRecords, setMedicalRecords] = useState<MedicalRecord[]>(mockMedicalRecords)
   const [appointments, setAppointments] = useState<Appointment[]>(mockAppointments)
+  const [spaGroomingAppointments, setSpaGroomingAppointments] = useState<SpaGroomingAppointment[]>([])
   const [inventory, setInventory] = useState<InventoryItem[]>(mockInventory)
   const [hospitalizations, setHospitalizations] = useState<Hospitalization[]>(mockHospitalizations)
   const [branches, setBranches] = useState<Branch[]>(mockBranches)
@@ -85,6 +90,18 @@ export function ClinicProvider({ children }: { children: React.ReactNode }) {
 
   const deleteAppointment = (id: string) => {
     setAppointments((prev) => prev.filter((a) => a.id !== id))
+  }
+
+  const addSpaGroomingAppointment = (appointment: SpaGroomingAppointment) => {
+    setSpaGroomingAppointments((prev) => [...prev, appointment])
+  }
+
+  const updateSpaGroomingAppointment = (id: string, updatedAppointment: Partial<SpaGroomingAppointment>) => {
+    setSpaGroomingAppointments((prev) => prev.map((a) => (a.id === id ? { ...a, ...updatedAppointment } : a)))
+  }
+
+  const deleteSpaGroomingAppointment = (id: string) => {
+    setSpaGroomingAppointments((prev) => prev.filter((a) => a.id !== id))
   }
 
   const addInventoryItem = (item: InventoryItem) => {
@@ -158,6 +175,7 @@ export function ClinicProvider({ children }: { children: React.ReactNode }) {
         pets,
         medicalRecords,
         appointments,
+        spaGroomingAppointments,
         inventory,
         hospitalizations,
         branches,
@@ -171,6 +189,9 @@ export function ClinicProvider({ children }: { children: React.ReactNode }) {
         addAppointment,
         updateAppointment,
         deleteAppointment,
+        addSpaGroomingAppointment,
+        updateSpaGroomingAppointment,
+        deleteSpaGroomingAppointment,
         addInventoryItem,
         updateInventoryItem,
         deleteInventoryItem,

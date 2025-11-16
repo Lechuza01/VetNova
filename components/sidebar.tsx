@@ -31,6 +31,7 @@ import {
   FaHospital,
   FaBars,
   FaExclamationTriangle,
+  FaHandSparkles,
 } from "react-icons/fa"
 
 const menuItems = [
@@ -38,6 +39,7 @@ const menuItems = [
   { href: "/dashboard/clients", label: "Clientes", icon: FaUserFriends, roles: ["admin", "veterinarian", "receptionist"] },
   { href: "/dashboard/pets", label: "Mascotas", icon: FaDog, roles: ["admin", "veterinarian", "receptionist", "cliente"] },
   { href: "/dashboard/appointments", label: "Turnos", icon: FaCalendarAlt, roles: ["admin", "veterinarian", "receptionist", "cliente"] },
+  { href: "/dashboard/spa-grooming", label: "Spa & Peluquería", icon: FaHandSparkles, roles: ["cliente"] },
   { href: "/dashboard/hospitalizations", label: "Internaciones", icon: FaHospital, roles: ["admin", "veterinarian", "receptionist"] },
   { href: "/dashboard/emergencies", label: "Emergencias", icon: FaExclamationTriangle, roles: ["admin", "veterinarian", "receptionist", "cliente"] },
   { href: "/dashboard/marketplace", label: "Marketplace", icon: FaStore, roles: ["admin", "veterinarian", "receptionist", "cliente"] },

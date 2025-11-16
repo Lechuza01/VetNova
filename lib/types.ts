@@ -91,6 +91,19 @@ export interface Appointment {
   notes?: string
 }
 
+export interface SpaGroomingAppointment {
+  id: string
+  petId: string
+  clientId: string
+  branchId: string
+  date: string
+  time: string
+  serviceType: "spa" | "grooming"
+  reason?: string
+  status: "pending" | "confirmed" | "completed" | "cancelled"
+  notes?: string
+}
+
 export interface InventoryItem {
   id: string
   name: string
