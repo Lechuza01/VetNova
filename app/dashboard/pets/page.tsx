@@ -37,7 +37,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { Textarea } from "@/components/ui/textarea"
-import { FaPlus, FaEdit, FaTrash, FaSearch, FaDog, FaCat, FaFileAlt, FaExclamationTriangle, FaUserTimes } from "react-icons/fa"
+import { FaPlus, FaEdit, FaTrash, FaSearch, FaDog, FaCat, FaFileAlt, FaExclamationTriangle, FaUserTimes, FaPrint } from "react-icons/fa"
 import Image from "next/image"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useClinic } from "@/contexts/clinic-context"
@@ -52,6 +52,8 @@ export default function PetsPage() {
   const [statusDialogOpen, setStatusDialogOpen] = useState<Record<string, boolean>>({})
   const [newServiceDialogOpen, setNewServiceDialogOpen] = useState(false)
   const [selectedPetForService, setSelectedPetForService] = useState<string | null>(null)
+  const [vaccinationCertDialogOpen, setVaccinationCertDialogOpen] = useState(false)
+  const [selectedPetForCert, setSelectedPetForCert] = useState<string | null>(null)
 
   // Si es cliente, filtrar solo sus mascotas
   const clientPets = user?.role === "cliente" 
@@ -74,6 +76,15 @@ export default function PetsPage() {
 
   const getPetRecords = (petId: string) => {
     return medicalRecords.filter((r) => r.petId === petId)
+  }
+
+  const getPetVaccinations = (petId: string) => {
+    return medicalRecords.filter((r) => {
+      if (r.petId !== petId) return false
+      const reason = r.reason?.toLowerCase() || ""
+      const treatment = r.treatment?.toLowerCase() || ""
+      return reason.includes("vacunación") || reason.includes("vacuna") || treatment.includes("vacuna")
+    })
   }
 
   return (
@@ -218,6 +229,19 @@ export default function PetsPage() {
                               </DialogContent>
                             </Dialog>
                           )}
+                          {user?.role === "cliente" && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedPetForCert(pet.id)
+                                setVaccinationCertDialogOpen(true)
+                              }}
+                            >
+                              <FaPrint className="w-4 h-4 mr-1" />
+                              Certificado
+                            </Button>
+                          )}
                           {user?.role !== "cliente" && (
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
@@ -309,6 +333,17 @@ export default function PetsPage() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Modal de Certificado de Vacunación */}
+      {selectedPetForCert && (
+        <VaccinationCertificate
+          pet={pets.find((p) => p.id === selectedPetForCert)}
+          vaccinations={getPetVaccinations(selectedPetForCert)}
+          clientName={getClientName(pets.find((p) => p.id === selectedPetForCert)?.clientId || "")}
+          open={vaccinationCertDialogOpen}
+          onOpenChange={setVaccinationCertDialogOpen}
+        />
+      )}
     </div>
   )
 }
@@ -873,5 +908,189 @@ function PetStatusForm({
         </Button>
       </div>
     </form>
+  )
+}
+
+function VaccinationCertificate({
+  pet,
+  vaccinations,
+  clientName,
+  open,
+  onOpenChange,
+}: {
+  pet: any
+  vaccinations: any[]
+  clientName: string
+  open: boolean
+  onOpenChange: (open: boolean) => void
+}) {
+  const handlePrint = () => {
+    window.print()
+  }
+
+  // Extraer información de vacunas del tratamiento
+  const getVaccineName = (treatment: string) => {
+    if (treatment.toLowerCase().includes("antirrábica")) return "Vacuna Antirrábica"
+    if (treatment.toLowerCase().includes("polivalente")) return "Vacuna Polivalente"
+    if (treatment.toLowerCase().includes("moquillo")) return "Vacuna Moquillo"
+    if (treatment.toLowerCase().includes("parvovirus")) return "Vacuna Parvovirus"
+    if (treatment.toLowerCase().includes("hepatitis")) return "Vacuna Hepatitis"
+    if (treatment.toLowerCase().includes("panleucopenia")) return "Vacuna Panleucopenia"
+    if (treatment.toLowerCase().includes("calicivirus")) return "Vacuna Calicivirus"
+    return treatment || "Vacuna"
+  }
+
+  if (!pet) return null
+
+  return (
+    <>
+      <style>{`
+        @media print {
+          body * {
+            visibility: hidden;
+          }
+          .vaccination-cert-content, .vaccination-cert-content * {
+            visibility: visible;
+          }
+          .vaccination-cert-content {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            padding: 2rem;
+          }
+          .no-print-cert {
+            display: none !important;
+          }
+        }
+      `}</style>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <div className="vaccination-cert-content">
+            <DialogHeader className="no-print-cert">
+              <DialogTitle>Certificado de Vacunación de {pet.name}</DialogTitle>
+            </DialogHeader>
+            
+            <div className="space-y-6 mt-4">
+              {/* Encabezado del Certificado */}
+              <div className="text-center border-b-2 border-primary pb-4">
+                <h1 className="text-3xl font-bold text-primary mb-2">VetNova</h1>
+                <h2 className="text-2xl font-semibold">Certificado de Vacunación</h2>
+                <p className="text-lg mt-2">Certificado Oficial de Vacunación</p>
+              </div>
+
+              {/* Información de la Mascota */}
+              <div className="grid grid-cols-2 gap-6">
+                <div>
+                  <h3 className="font-semibold text-lg mb-3">Datos de la Mascota</h3>
+                  <div className="space-y-2">
+                    <p><span className="font-medium">Nombre:</span> {pet.name}</p>
+                    <p><span className="font-medium">Especie:</span> {pet.species}</p>
+                    <p><span className="font-medium">Raza:</span> {pet.breed}</p>
+                    <p><span className="font-medium">Fecha de Nacimiento:</span> {pet.birthDate ? new Date(pet.birthDate).toLocaleDateString("es-ES") : "N/A"}</p>
+                    <p><span className="font-medium">Microchip:</span> {pet.microchipNumber || "No registrado"}</p>
+                  </div>
+                </div>
+                <div>
+                  <h3 className="font-semibold text-lg mb-3">Datos del Propietario</h3>
+                  <div className="space-y-2">
+                    <p><span className="font-medium">Nombre:</span> {clientName}</p>
+                    <p><span className="font-medium">Fecha de Emisión:</span> {new Date().toLocaleDateString("es-ES")}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Historial de Vacunaciones */}
+              <div className="mt-6">
+                <h3 className="font-semibold text-lg mb-4">Historial de Vacunaciones</h3>
+                {vaccinations.length === 0 ? (
+                  <p className="text-muted-foreground italic">No se encontraron registros de vacunación para esta mascota.</p>
+                ) : (
+                  <div className="border rounded-lg overflow-hidden">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Fecha</TableHead>
+                          <TableHead>Vacuna</TableHead>
+                          <TableHead>Lote</TableHead>
+                          <TableHead>Veterinario</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {vaccinations.map((vaccination, index) => (
+                          <TableRow key={vaccination.id || index}>
+                            <TableCell>{new Date(vaccination.date).toLocaleDateString("es-ES")}</TableCell>
+                            <TableCell>{getVaccineName(vaccination.treatment)}</TableCell>
+                            <TableCell>LOT-{vaccination.id?.slice(-6) || "N/A"}</TableCell>
+                            <TableCell>Dr. Carlos Ruiz</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </div>
+
+              {/* Firma y QR */}
+              <div className="mt-8 grid grid-cols-2 gap-8">
+                <div className="space-y-4">
+                  <div className="border-t-2 border-gray-400 pt-4">
+                    <p className="font-semibold mb-2">Firma Digital del Veterinario</p>
+                    <div className="flex items-center gap-4">
+                      <div className="w-32 h-16 border-2 border-gray-300 rounded flex items-center justify-center bg-gray-50">
+                        <span className="text-xs text-gray-500">Firma Digital</span>
+                      </div>
+                      <div>
+                        <p className="font-medium">Dr. Carlos Ruiz</p>
+                        <p className="text-sm text-muted-foreground">Veterinario Certificado</p>
+                        <p className="text-xs text-muted-foreground">Mat. 12345</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className="space-y-4">
+                  <div className="border-t-2 border-gray-400 pt-4">
+                    <p className="font-semibold mb-2">Código de Validación</p>
+                    <div className="flex items-center gap-4">
+                      <div className="w-24 h-24 border-2 border-gray-300 rounded flex items-center justify-center bg-gray-50">
+                        <div className="text-center">
+                          <div className="text-xs font-mono mb-1">QR</div>
+                          <div className="text-xs text-gray-500">CODE</div>
+                        </div>
+                      </div>
+                      <div>
+                        <p className="text-xs font-mono text-muted-foreground break-all">
+                          VET-{pet.id?.slice(-8) || "NOVA"}-{new Date().getFullYear()}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Escanee para validar
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Nota al pie */}
+              <div className="mt-6 pt-4 border-t text-xs text-muted-foreground">
+                <p>Este certificado es válido únicamente para fines informativos. Para verificación oficial, consulte con VetNova.</p>
+                <p className="mt-2">VetNova - Clínica Veterinaria | www.vetnova.com | contacto@vetnova.com</p>
+              </div>
+            </div>
+
+            {/* Botones de acción */}
+            <div className="flex justify-end gap-2 mt-6 no-print-cert">
+              <Button variant="outline" onClick={() => onOpenChange(false)}>
+                Cerrar
+              </Button>
+              <Button onClick={handlePrint}>
+                <FaPrint className="mr-2" />
+                Imprimir Certificado
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   )
 }
