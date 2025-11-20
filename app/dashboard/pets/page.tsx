@@ -80,8 +80,14 @@ export default function PetsPage() {
     <div className="space-y-4 md:space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-foreground">Mascotas</h1>
-          <p className="text-sm md:text-base text-muted-foreground mt-1">Gestión de mascotas y sus historiales clínicos</p>
+          <h1 className="text-2xl md:text-3xl font-bold text-foreground">
+            {user?.role === "cliente" ? "Mis Mascotas" : "Mascotas"}
+          </h1>
+          <p className="text-sm md:text-base text-muted-foreground mt-1">
+            {user?.role === "cliente" 
+              ? "Gestiona tus mascotas y sus historiales clínicos"
+              : "Gestión de mascotas y sus historiales clínicos"}
+          </p>
         </div>
         {user?.role !== "cliente" && (
           <div className="flex gap-2">
@@ -174,40 +180,44 @@ export default function PetsPage() {
                       <TableCell>{pet.weight} kg</TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setSelectedPetForService(pet.id)
-                              setNewServiceDialogOpen(true)
-                            }}
-                          >
-                            <FaPlus className="w-4 h-4 mr-1" />
-                            Nueva Consulta
-                          </Button>
-                          <Dialog>
-                            <DialogTrigger asChild>
-                              <Button variant="ghost" size="sm" onClick={() => setSelectedPet(pet.id)}>
-                                <FaFileAlt className="w-4 h-4" />
-                              </Button>
-                            </DialogTrigger>
-                            <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-                              <DialogHeader>
-                                <DialogTitle>Historial Clínico - {pet.name}</DialogTitle>
-                                <DialogDescription>
-                                  {pet.species} {pet.breed} - Propietario: {getClientName(pet.clientId)}
-                                </DialogDescription>
-                              </DialogHeader>
-                              <MedicalHistory
-                                pet={pet}
-                                records={getPetRecords(pet.id)}
-                                onAddRecord={addMedicalRecord}
-                                onUpdatePet={updatePet}
-                                clients={clients}
-                                inventory={inventory}
-                              />
-                            </DialogContent>
-                          </Dialog>
+                          {user?.role !== "cliente" && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedPetForService(pet.id)
+                                setNewServiceDialogOpen(true)
+                              }}
+                            >
+                              <FaPlus className="w-4 h-4 mr-1" />
+                              Nueva Consulta
+                            </Button>
+                          )}
+                          {user?.role !== "cliente" && (
+                            <Dialog>
+                              <DialogTrigger asChild>
+                                <Button variant="ghost" size="sm" onClick={() => setSelectedPet(pet.id)}>
+                                  <FaFileAlt className="w-4 h-4" />
+                                </Button>
+                              </DialogTrigger>
+                              <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+                                <DialogHeader>
+                                  <DialogTitle>Historial Clínico - {pet.name}</DialogTitle>
+                                  <DialogDescription>
+                                    {pet.species} {pet.breed} - Propietario: {getClientName(pet.clientId)}
+                                  </DialogDescription>
+                                </DialogHeader>
+                                <MedicalHistory
+                                  pet={pet}
+                                  records={getPetRecords(pet.id)}
+                                  onAddRecord={addMedicalRecord}
+                                  onUpdatePet={updatePet}
+                                  clients={clients}
+                                  inventory={inventory}
+                                />
+                              </DialogContent>
+                            </Dialog>
+                          )}
                           {user?.role !== "cliente" && (
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>

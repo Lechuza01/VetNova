@@ -1,6 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import type React from "react"
+import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -20,11 +22,38 @@ import { FaPlus, FaEdit, FaTrash, FaSearch } from "react-icons/fa"
 import { useAuth } from "@/contexts/auth-context"
 import { mockUsers } from "@/lib/auth"
 import type { User } from "@/lib/types"
+import { useToast } from "@/hooks/use-toast"
 
 export default function UsersPage() {
   const { user: currentUser } = useAuth()
+  const router = useRouter()
+  const { toast } = useToast()
   const [searchTerm, setSearchTerm] = useState("")
-  const [users] = useState<User[]>(Object.values(mockUsers).map((u) => ({ ...u.user, createdAt: "2024-01-01" })))
+  const [dialogOpen, setDialogOpen] = useState(false)
+  const [mockUsersList] = useState<User[]>(Object.values(mockUsers).map((u) => ({ ...u.user, createdAt: "2024-01-01" })))
+  const [temporaryUsers, setTemporaryUsers] = useState<User[]>([])
+
+  // Cargar usuarios temporales del localStorage al montar
+  useEffect(() => {
+    const stored = localStorage.getItem("vetclinic_temporary_users")
+    if (stored) {
+      setTemporaryUsers(JSON.parse(stored))
+    }
+  }, [])
+
+  // Restringir acceso solo a admin
+  useEffect(() => {
+    if (currentUser?.role !== "admin") {
+      router.push("/dashboard")
+    }
+  }, [currentUser?.role, router])
+
+  if (currentUser?.role !== "admin") {
+    return null
+  }
+
+  // Combinar usuarios mock con usuarios temporales
+  const users = [...mockUsersList, ...temporaryUsers]
 
   const filteredUsers = users.filter(
     (user) =>
@@ -55,23 +84,33 @@ export default function UsersPage() {
           <h1 className="text-3xl font-bold text-foreground">Usuarios</h1>
           <p className="text-muted-foreground mt-1">Gestión de usuarios del sistema</p>
         </div>
-        {currentUser?.role === "admin" && (
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button>
-                <FaPlus className="mr-2" />
-                Nuevo Usuario
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl">
-              <DialogHeader>
-                <DialogTitle>Crear Nuevo Usuario</DialogTitle>
-                <DialogDescription>Completa los datos del nuevo usuario del sistema</DialogDescription>
-              </DialogHeader>
-              <UserForm />
-            </DialogContent>
-          </Dialog>
-        )}
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <DialogTrigger asChild>
+            <Button>
+              <FaPlus className="mr-2" />
+              Nuevo Usuario
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Crear Nuevo Usuario</DialogTitle>
+              <DialogDescription>Completa los datos del nuevo usuario del sistema</DialogDescription>
+            </DialogHeader>
+            <UserForm
+              onSuccess={(newUser) => {
+                // Agregar usuario temporal
+                const updated = [...temporaryUsers, newUser]
+                setTemporaryUsers(updated)
+                localStorage.setItem("vetclinic_temporary_users", JSON.stringify(updated))
+                setDialogOpen(false)
+                toast({
+                  title: "Usuario creado",
+                  description: `El usuario ${newUser.name} ha sido creado exitosamente`,
+                })
+              }}
+            />
+          </DialogContent>
+        </Dialog>
       </div>
 
       <Card>
@@ -133,35 +172,65 @@ export default function UsersPage() {
   )
 }
 
-function UserForm() {
+function UserForm({ onSuccess }: { onSuccess: (user: User) => void }) {
+  const [role, setRole] = useState<string>("")
+
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    const formData = new FormData(e.currentTarget)
+    
+    const password = formData.get("password") as string
+    const confirmPassword = formData.get("confirmPassword") as string
+
+    if (password !== confirmPassword) {
+      alert("Las contraseñas no coinciden")
+      return
+    }
+
+    if (!role) {
+      alert("Por favor selecciona un rol")
+      return
+    }
+
+    const newUser: User = {
+      id: `temp_${Date.now()}`,
+      name: formData.get("name") as string,
+      email: formData.get("email") as string,
+      role: role as User["role"],
+      phone: formData.get("phone") as string || undefined,
+      address: formData.get("address") as string || undefined,
+      birthDate: formData.get("birthDate") as string || undefined,
+      createdAt: new Date().toISOString(),
+    }
+
+    onSuccess(newUser)
+    
+    // Reset form
+    e.currentTarget.reset()
+    setRole("")
+  }
+
   return (
-    <form className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-4">
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="name">Nombre Completo</Label>
-          <Input id="name" placeholder="Dr. Juan Pérez" />
+          <Label htmlFor="name">Nombre Completo *</Label>
+          <Input id="name" name="name" required placeholder="Dr. Juan Pérez" />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="username">Usuario</Label>
-          <Input id="username" placeholder="jperez" />
+          <Label htmlFor="email">Email *</Label>
+          <Input id="email" name="email" type="email" required placeholder="juan@vetnova.com" />
         </div>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="email">Email</Label>
-          <Input id="email" type="email" placeholder="juan@vetnova.com" />
-        </div>
         <div className="space-y-2">
           <Label htmlFor="phone">Teléfono</Label>
-          <Input id="phone" placeholder="+34 600 000 000" />
+          <Input id="phone" name="phone" placeholder="+34 600 000 000" />
         </div>
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="role">Rol</Label>
-          <Select>
+          <Label htmlFor="role">Rol *</Label>
+          <Select value={role} onValueChange={setRole} required>
             <SelectTrigger>
               <SelectValue placeholder="Seleccionar rol" />
             </SelectTrigger>
@@ -172,30 +241,32 @@ function UserForm() {
             </SelectContent>
           </Select>
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="birthDate">Fecha de Nacimiento</Label>
-          <Input id="birthDate" type="date" />
-        </div>
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="address">Dirección</Label>
-        <Input id="address" placeholder="Calle Principal 123" />
       </div>
 
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="password">Contraseña</Label>
-          <Input id="password" type="password" />
+          <Label htmlFor="birthDate">Fecha de Nacimiento</Label>
+          <Input id="birthDate" name="birthDate" type="date" />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="confirmPassword">Confirmar Contraseña</Label>
-          <Input id="confirmPassword" type="password" />
+          <Label htmlFor="address">Dirección</Label>
+          <Input id="address" name="address" placeholder="Calle Principal 123" />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="password">Contraseña *</Label>
+          <Input id="password" name="password" type="password" required />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="confirmPassword">Confirmar Contraseña *</Label>
+          <Input id="confirmPassword" name="confirmPassword" type="password" required />
         </div>
       </div>
 
       <div className="flex justify-end gap-2 pt-4">
-        <Button type="button" variant="outline">
+        <Button type="button" variant="outline" onClick={() => setRole("")}>
           Cancelar
         </Button>
         <Button type="submit">Crear Usuario</Button>

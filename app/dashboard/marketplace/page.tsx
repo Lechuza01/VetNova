@@ -25,6 +25,7 @@ import { useToast } from "@/hooks/use-toast"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
 import Image from "next/image"
+import { useAuth } from "@/contexts/auth-context"
 
 const categories = [
   { value: "all", label: "Todas las categorías" },
@@ -39,6 +40,9 @@ const categories = [
 export default function MarketplacePage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("all")
+  const [cartDialogOpen, setCartDialogOpen] = useState(false)
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false)
+  const [orderDetails, setOrderDetails] = useState<{ total: number; paymentMethod: PaymentMethod; items: any[]; cardNumber?: string } | null>(null)
   const { items, addToCart, removeFromCart, updateQuantity, getTotal, getItemCount } = useCart()
   const { orders } = useOrders()
   const { toast } = useToast()
@@ -93,7 +97,7 @@ export default function MarketplacePage() {
               <OrdersHistory orders={orders} />
             </DialogContent>
           </Dialog>
-          <Dialog>
+          <Dialog open={cartDialogOpen} onOpenChange={setCartDialogOpen}>
             <DialogTrigger asChild>
               <Button className="relative">
                 <FaShoppingCart className="mr-2" />
@@ -114,11 +118,81 @@ export default function MarketplacePage() {
                 onRemove={removeFromCart}
                 total={getTotal()}
                 onClearCart={() => {}}
+                onCloseCart={() => setCartDialogOpen(false)}
+                onOrderComplete={(details) => {
+                  setOrderDetails(details)
+                  setCartDialogOpen(false)
+                  // Mostrar el diálogo de confirmación inmediatamente después de cerrar el carrito
+                  setTimeout(() => {
+                    setShowSuccessDialog(true)
+                  }, 100)
+                }}
               />
             </DialogContent>
           </Dialog>
         </div>
       </div>
+
+      {/* Dialog de confirmación de compra */}
+      <Dialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <div className="flex items-center justify-center mb-4">
+              <div className="bg-green-100 rounded-full p-4">
+                <FaCheckCircle className="w-10 h-10 text-green-600" />
+              </div>
+            </div>
+            <DialogTitle className="text-center text-2xl font-bold text-green-600">
+              ¡Compra Confirmada!
+            </DialogTitle>
+            <DialogDescription className="text-center text-base mt-2">
+              Tu pedido ha sido procesado y confirmado exitosamente
+            </DialogDescription>
+          </DialogHeader>
+          {orderDetails && (
+            <div className="space-y-4 py-4">
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                <p className="text-sm font-semibold text-green-800 mb-2">Resumen de la compra:</p>
+                <div className="space-y-2 text-sm">
+                  {orderDetails.items.map((item, index) => (
+                    <div key={index} className="flex justify-between">
+                      <span className="text-muted-foreground">{item.productName} x{item.quantity}</span>
+                      <span className="font-medium">€{(item.price * item.quantity).toFixed(2)}</span>
+                    </div>
+                  ))}
+                </div>
+                <Separator className="my-3" />
+                <div className="flex justify-between items-center">
+                  <span className="font-semibold text-base">Total:</span>
+                  <span className="text-xl font-bold text-green-600">€{orderDetails.total.toFixed(2)}</span>
+                </div>
+              </div>
+              <div className="pt-2 space-y-2">
+                <p className="text-sm text-muted-foreground">
+                  Método de pago:{" "}
+                  <span className="font-medium">
+                    {orderDetails.paymentMethod === "credit_card"
+                      ? "Tarjeta de Crédito"
+                      : orderDetails.paymentMethod === "debit_card"
+                      ? "Tarjeta de Débito"
+                      : "Mercadopago"}
+                  </span>
+                </p>
+                {(orderDetails.paymentMethod === "credit_card" || orderDetails.paymentMethod === "debit_card") && orderDetails.cardNumber && (
+                  <p className="text-sm text-muted-foreground">
+                    Tarjeta terminada en: <span className="font-medium">{orderDetails.cardNumber.replace(/\s/g, "").slice(-4)}</span>
+                  </p>
+                )}
+              </div>
+              <div className="pt-4">
+                <Button className="w-full" size="lg" onClick={() => setShowSuccessDialog(false)}>
+                  Cerrar
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <Card>
         <CardHeader>
@@ -229,23 +303,42 @@ function CartContent({
   onRemove,
   total,
   onClearCart,
+  onCloseCart,
+  onOrderComplete,
 }: {
   items: Array<{ productId: string; quantity: number; product?: MarketplaceProduct }>
   onUpdateQuantity: (productId: string, quantity: number) => void
   onRemove: (productId: string) => void
   total: number
   onClearCart: () => void
+  onCloseCart: () => void
+  onOrderComplete: (details: { total: number; paymentMethod: PaymentMethod; items: any[]; cardNumber?: string }) => void
 }) {
   const { toast } = useToast()
   const { addOrder } = useOrders()
   const { clearCart } = useCart()
+  const { user } = useAuth()
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("credit_card")
+  const [cardNumber, setCardNumber] = useState("1234 5678 9012 3456")
+  
+  // Fecha de vencimiento fija
+  const cardExpiry = "12/25"
 
   const handleCheckout = () => {
     if (items.length === 0) {
       toast({
         title: "Carrito vacío",
         description: "Agrega productos al carrito antes de finalizar la compra",
+        variant: "destructive",
+      })
+      return
+    }
+
+    // Validar campos de tarjeta si se selecciona crédito o débito
+    if ((paymentMethod === "credit_card" || paymentMethod === "debit_card") && !cardNumber) {
+      toast({
+        title: "Datos incompletos",
+        description: "Por favor completa el número de tarjeta",
         variant: "destructive",
       })
       return
@@ -266,20 +359,25 @@ function CartContent({
       status: "completed",
     })
 
+    // Guardar detalles de la orden para el pop-up (incluyendo número de tarjeta antes de limpiarlo)
+    const savedCardNumber = cardNumber
+    
+    const orderDetails = {
+      total,
+      paymentMethod,
+      items: orderItems,
+      cardNumber: savedCardNumber,
+    }
+
     // Limpiar el carrito
     clearCart()
     onClearCart()
 
-    const paymentMethodNames = {
-      credit_card: "Tarjeta de Crédito",
-      debit_card: "Tarjeta de Débito",
-      mercadopago: "Mercadopago",
-    }
+    // Limpiar campos de tarjeta (restaurar valores por defecto)
+    setCardNumber("1234 5678 9012 3456")
 
-    toast({
-      title: "Compra realizada",
-      description: `Total: €${total.toFixed(2)}. Método de pago: ${paymentMethodNames[paymentMethod]}. Gracias por tu compra!`,
-    })
+    // Notificar al componente padre para mostrar el diálogo de confirmación
+    onOrderComplete(orderDetails)
   }
 
   if (items.length === 0) {
@@ -374,6 +472,46 @@ function CartContent({
             </div>
           </RadioGroup>
         </div>
+
+        {/* Campos de tarjeta para crédito o débito */}
+        {(paymentMethod === "credit_card" || paymentMethod === "debit_card") && (
+          <div className="space-y-4 p-4 border rounded-lg bg-muted/50">
+            <div className="space-y-2">
+              <Label htmlFor="cardName">Nombre en la Tarjeta</Label>
+              <Input
+                id="cardName"
+                value={user?.name || ""}
+                disabled
+                className="bg-background"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="cardNumber">Número de Tarjeta</Label>
+              <Input
+                id="cardNumber"
+                placeholder="1234 5678 9012 3456"
+                value={cardNumber}
+                onChange={(e) => {
+                  // Formatear número de tarjeta con espacios cada 4 dígitos
+                  const value = e.target.value.replace(/\s/g, "").replace(/\D/g, "").slice(0, 16)
+                  const formatted = value.match(/.{1,4}/g)?.join(" ") || value
+                  setCardNumber(formatted)
+                }}
+                maxLength={19}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="cardExpiry">Fecha de Vencimiento</Label>
+              <Input
+                id="cardExpiry"
+                value={cardExpiry}
+                disabled
+                className="bg-background"
+              />
+            </div>
+          </div>
+        )}
+
         <Separator />
         <div className="flex justify-between text-lg font-bold">
           <span>Total:</span>

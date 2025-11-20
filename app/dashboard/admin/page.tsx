@@ -186,10 +186,12 @@ export default function AdminPage() {
             <FaCog className="mr-2" />
             General
           </TabsTrigger>
-          <TabsTrigger value="security">
-            <FaShieldAlt className="mr-2" />
-            Seguridad
-          </TabsTrigger>
+          {user?.role === "admin" && (
+            <TabsTrigger value="security">
+              <FaShieldAlt className="mr-2" />
+              Seguridad
+            </TabsTrigger>
+          )}
           <TabsTrigger value="notifications">
             <FaBell className="mr-2" />
             Notificaciones
@@ -253,7 +255,8 @@ export default function AdminPage() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="security" className="space-y-4">
+        {user?.role === "admin" && (
+          <TabsContent value="security" className="space-y-4">
           <Card>
             <CardHeader>
               <CardTitle>Configuración de Seguridad</CardTitle>
@@ -586,7 +589,8 @@ export default function AdminPage() {
               </div>
             </CardContent>
           </Card>
-        </TabsContent>
+          </TabsContent>
+        )}
 
         <TabsContent value="notifications" className="space-y-4">
           <Card>

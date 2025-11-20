@@ -35,13 +35,13 @@ import {
 } from "react-icons/fa"
 
 const menuItems = [
-  { href: "/dashboard/users", label: "Usuarios", icon: FaUsers, roles: ["admin", "veterinarian", "receptionist"] },
+  { href: "/dashboard/users", label: "Usuarios", icon: FaUsers, roles: ["admin"] },
   { href: "/dashboard/clients", label: "Clientes", icon: FaUserFriends, roles: ["admin", "veterinarian", "receptionist"] },
-  { href: "/dashboard/pets", label: "Mascotas", icon: FaDog, roles: ["admin", "veterinarian", "receptionist", "cliente"] },
+  { href: "/dashboard/pets", label: "Mascotas", labelForClient: "Mis Mascotas", icon: FaDog, roles: ["admin", "veterinarian", "receptionist", "cliente"] },
   { href: "/dashboard/appointments", label: "Turnos", icon: FaCalendarAlt, roles: ["admin", "veterinarian", "receptionist", "cliente"] },
   { href: "/dashboard/spa-grooming", label: "Spa & Peluquería", icon: FaHandSparkles, roles: ["cliente"] },
   { href: "/dashboard/hospitalizations", label: "Internaciones", icon: FaHospital, roles: ["admin", "veterinarian", "receptionist"] },
-  { href: "/dashboard/emergencies", label: "Emergencias", icon: FaExclamationTriangle, roles: ["admin", "veterinarian", "receptionist", "cliente"] },
+  { href: "/dashboard/emergencies", label: "Emergencias", icon: FaExclamationTriangle, roles: ["admin", "veterinarian", "receptionist"] },
   { href: "/dashboard/marketplace", label: "Marketplace", icon: FaStore, roles: ["admin", "veterinarian", "receptionist", "cliente"] },
   { href: "/dashboard/community", label: "Comunidad", icon: FaComments, roles: ["admin", "veterinarian", "receptionist", "cliente"] },
   { href: "/dashboard/reports", label: "Reportes", icon: FaChartBar, roles: ["admin", "veterinarian", "receptionist"] },
@@ -82,6 +82,7 @@ function SidebarContent({ onLinkClick, onToggleCollapse }: { onLinkClick?: () =>
 
           const Icon = item.icon
           const isActive = pathname === item.href
+          const displayLabel = user?.role === "cliente" && item.labelForClient ? item.labelForClient : item.label
 
           return (
             <Link
@@ -96,7 +97,7 @@ function SidebarContent({ onLinkClick, onToggleCollapse }: { onLinkClick?: () =>
               )}
             >
               <Icon className="w-4 h-4" />
-              {item.label}
+              {displayLabel}
             </Link>
           )
         })}
@@ -172,6 +173,7 @@ export function Sidebar() {
 
             const Icon = item.icon
             const isActive = pathname === item.href
+            const displayLabel = user?.role === "cliente" && item.labelForClient ? item.labelForClient : item.label
 
             return (
               <Link
@@ -185,7 +187,7 @@ export function Sidebar() {
                 )}
               >
                 <Icon className="w-4 h-4" />
-                {item.label}
+                {displayLabel}
               </Link>
             )
           })}
@@ -201,6 +203,7 @@ export function Sidebar() {
 
             const Icon = item.icon
             const isActive = pathname === item.href
+            const displayLabel = user?.role === "cliente" && item.labelForClient ? item.labelForClient : item.label
 
             return (
               <Link
@@ -212,7 +215,7 @@ export function Sidebar() {
                     ? "bg-sidebar-primary text-sidebar-primary-foreground"
                     : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
                 )}
-                title={item.label}
+                title={displayLabel}
               >
                 <Icon className="w-4 h-4" />
               </Link>

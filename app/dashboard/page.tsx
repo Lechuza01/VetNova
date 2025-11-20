@@ -1,11 +1,30 @@
 "use client"
 
+import { useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { FaUsers, FaDog, FaCalendarAlt, FaChartLine } from "react-icons/fa"
 
 export default function DashboardPage() {
   const { user } = useAuth()
+  const router = useRouter()
+
+  // Si es cliente, redirigir a la página de mascotas
+  useEffect(() => {
+    if (user?.role === "cliente") {
+      router.push("/dashboard/pets")
+    }
+    // Si es veterinario, redirigir a la página de turnos
+    if (user?.role === "veterinarian") {
+      router.push("/dashboard/appointments")
+    }
+  }, [user?.role, router])
+
+  // No mostrar contenido si es cliente o veterinario (se está redirigiendo)
+  if (user?.role === "cliente" || user?.role === "veterinarian") {
+    return null
+  }
 
   const stats = [
     {
