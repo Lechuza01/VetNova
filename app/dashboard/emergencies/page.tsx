@@ -24,6 +24,7 @@ import { useToast } from "@/hooks/use-toast"
 import { formatDistanceToNow } from "date-fns"
 import { es } from "date-fns/locale"
 import { EmergencyForm } from "@/components/emergency-form"
+import { mockUsers } from "@/lib/auth"
 
 interface Emergency {
   id: string
@@ -67,12 +68,14 @@ const mockEmergencies: Emergency[] = [
 ]
 
 export default function EmergenciesPage() {
-  const { pets, clients } = useClinic()
+  const { pets, clients, branches } = useClinic()
   const { user } = useAuth()
   const { toast } = useToast()
   const [emergencies, setEmergencies] = useState<Emergency[]>(mockEmergencies)
   const [filterStatus, setFilterStatus] = useState<"all" | Emergency["status"]>("all")
   const [newDialogOpen, setNewDialogOpen] = useState(false)
+  const [emergencyConfirmationOpen, setEmergencyConfirmationOpen] = useState(false)
+  const [lastEmergencyData, setLastEmergencyData] = useState<{ branchName: string; branchAddress: string; veterinarianName: string } | null>(null)
 
   // Si es cliente, solo mostrar sus propias emergencias
   const clientEmergencies = user?.role === "cliente"
@@ -125,11 +128,42 @@ export default function EmergenciesPage() {
       reportedAt: new Date().toISOString(),
     }
     setEmergencies((prev) => [newEmergency, ...prev])
-    toast({
-      title: "Emergencia registrada",
-      description: "La emergencia se ha registrado correctamente",
-    })
+    
+    // Si es cliente, mostrar información de la sucursal de emergencias
+    if (user?.role === "cliente") {
+      // Buscar sucursal con servicio de urgencias (preferiblemente 24 horas)
+      const emergencyBranch = branches.find((b) => 
+        b.services.includes("urgencias") && b.isActive
+      ) || branches.find((b) => b.services.includes("urgencias"))
+      
+      if (emergencyBranch) {
+        const veterinarian = Object.values(mockUsers)
+          .map((u) => u.user)
+          .find((u) => u.id === emergencyBranch.chiefVeterinarianId)
+        
+        setLastEmergencyData({
+          branchName: emergencyBranch.name,
+          branchAddress: `${emergencyBranch.address}, ${emergencyBranch.city}`,
+          veterinarianName: veterinarian?.name || "Dr. Carlos Ruiz",
+        })
+        setEmergencyConfirmationOpen(true)
+      }
+    } else {
+      toast({
+        title: "Emergencia registrada",
+        description: "La emergencia se ha registrado correctamente",
+      })
+    }
+    
     setNewDialogOpen(false)
+  }
+
+  const handleRequestAmbulance = () => {
+    toast({
+      title: "Ambulancia solicitada",
+      description: "Se ha enviado la solicitud de ambulancia. Un vehículo será enviado a su ubicación.",
+    })
+    setEmergencyConfirmationOpen(false)
   }
 
   return (
@@ -336,6 +370,45 @@ export default function EmergenciesPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Diálogo de confirmación de emergencia para clientes */}
+      {user?.role === "cliente" && lastEmergencyData && (
+        <Dialog open={emergencyConfirmationOpen} onOpenChange={setEmergencyConfirmationOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <FaExclamationTriangle className="text-destructive" />
+                Emergencia Registrada
+              </DialogTitle>
+              <DialogDescription>
+                Su emergencia ha sido registrada correctamente. Por favor, diríjase a la sucursal de emergencias.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="bg-muted p-4 rounded-lg space-y-3">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground mb-1">Sucursal de Emergencias</p>
+                  <p className="text-base font-semibold">{lastEmergencyData.branchName}</p>
+                  <p className="text-sm text-muted-foreground mt-1">{lastEmergencyData.branchAddress}</p>
+                </div>
+                <div className="border-t pt-3">
+                  <p className="text-sm font-medium text-muted-foreground mb-1">Veterinario a Cargo</p>
+                  <p className="text-base font-semibold">{lastEmergencyData.veterinarianName}</p>
+                </div>
+              </div>
+              <div className="flex flex-col gap-2">
+                <Button onClick={handleRequestAmbulance} className="w-full">
+                  <FaAmbulance className="mr-2" />
+                  Solicitar Ambulancia
+                </Button>
+                <Button variant="outline" onClick={() => setEmergencyConfirmationOpen(false)} className="w-full">
+                  Entendido
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   )
 }
