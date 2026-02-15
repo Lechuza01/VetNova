@@ -2,7 +2,7 @@
  * Order database queries
  */
 
-import { query, queryOne, execute } from "../db"
+import { query, queryOne, execute } from "@/lib/db"
 import type { Order } from "@/lib/types"
 
 export async function getOrderById(id: string): Promise<Order | null> {

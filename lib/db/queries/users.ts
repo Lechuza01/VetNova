@@ -2,7 +2,7 @@
  * User database queries
  */
 
-import { query, queryOne, execute } from "../db"
+import { query, queryOne, execute } from "@/lib/db"
 import type { User } from "@/lib/types"
 
 export async function getUserById(id: string): Promise<User | null> {

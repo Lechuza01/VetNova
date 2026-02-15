@@ -2,7 +2,7 @@
  * Pet database queries
  */
 
-import { query, queryOne, execute } from "../db"
+import { query, queryOne, execute } from "@/lib/db"
 import type { Pet } from "@/lib/types"
 
 export async function getPetById(id: string): Promise<Pet | null> {

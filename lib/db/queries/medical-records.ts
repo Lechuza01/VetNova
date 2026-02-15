@@ -2,7 +2,7 @@
  * Medical Record database queries
  */
 
-import { query, queryOne, execute } from "../db"
+import { query, queryOne, execute } from "@/lib/db"
 import type { MedicalRecord } from "@/lib/types"
 
 export async function getMedicalRecordById(id: string): Promise<MedicalRecord | null> {

@@ -2,7 +2,7 @@
  * Inventory database queries
  */
 
-import { query, queryOne, execute } from "../db"
+import { query, queryOne, execute } from "@/lib/db"
 import type { InventoryItem } from "@/lib/types"
 
 export async function getInventoryItemById(id: string): Promise<InventoryItem | null> {

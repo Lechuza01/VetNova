@@ -2,7 +2,7 @@
  * Client database queries
  */
 
-import { query, queryOne, execute } from "../db"
+import { query, queryOne, execute } from "@/lib/db"
 import type { Client } from "@/lib/types"
 
 export async function getClientById(id: string): Promise<Client | null> {

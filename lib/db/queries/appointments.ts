@@ -2,7 +2,7 @@
  * Appointment database queries
  */
 
-import { query, queryOne, execute } from "../db"
+import { query, queryOne, execute } from "@/lib/db"
 import type { Appointment } from "@/lib/types"
 
 export async function getAppointmentById(id: string): Promise<Appointment | null> {

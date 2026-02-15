@@ -2,7 +2,7 @@
  * Emergency database queries
  */
 
-import { query, queryOne, execute } from "../db"
+import { query, queryOne, execute } from "@/lib/db"
 
 export interface Emergency {
   id: string
