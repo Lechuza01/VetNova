@@ -8,6 +8,16 @@ import * as userQueries from "@/lib/db/queries/users"
 import { isDbAvailable } from "@/lib/db"
 import { sql } from "@vercel/postgres"
 
+// GET method for debugging - returns API status
+export async function GET() {
+  return NextResponse.json({
+    message: "Login API is working",
+    method: "POST",
+    endpoint: "/api/auth/login",
+    dbAvailable: isDbAvailable(),
+  })
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
