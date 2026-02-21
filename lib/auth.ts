@@ -50,12 +50,37 @@ export const mockUsers: Record<string, { password: string; user: User }> = {
   },
 }
 
+// Synchronous version for backward compatibility (uses mock data)
 export function validateCredentials(username: string, password: string): User | null {
   const userRecord = mockUsers[username]
   if (userRecord && userRecord.password === password) {
     return userRecord.user
   }
   return null
+}
+
+// Async version that checks database first, falls back to mock data
+export async function validateCredentialsAsync(username: string, password: string): Promise<User | null> {
+  try {
+    // Try to authenticate via API (which uses database)
+    const response = await fetch("/api/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, password }),
+    })
+
+    if (response.ok) {
+      const user = await response.json()
+      return user as User
+    }
+
+    // If API fails (DB not available), fall back to mock data
+    return validateCredentials(username, password)
+  } catch (error) {
+    console.warn("Database authentication failed, using mock data:", error)
+    // Fallback to mock data
+    return validateCredentials(username, password)
+  }
 }
 
 export function generate2FACode(): string {

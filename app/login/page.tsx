@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
-import { validateCredentials, generate2FACode } from "@/lib/auth"
+import { validateCredentials, validateCredentialsAsync, generate2FACode } from "@/lib/auth"
 import { useAuth } from "@/contexts/auth-context"
 import { FaPaw, FaUser, FaLock, FaShieldAlt } from "react-icons/fa"
 import { useToast } from "@/hooks/use-toast"
@@ -27,25 +27,34 @@ export default function LoginPage() {
   const { login } = useAuth()
   const { toast } = useToast()
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
 
-    const user = validateCredentials(username, password)
+    try {
+      // Try database first, fallback to mock data
+      const user = await validateCredentialsAsync(username, password)
 
-    if (user) {
-      const code = generate2FACode()
-      setGeneratedCode(code)
-      generatedCodeRef.current = code
-      setShow2FA(true)
-      toast({
-        title: "Código 2FA Generado",
-        description: `Tu código de verificación es: ${code}`,
-      })
-    } else {
+      if (user) {
+        const code = generate2FACode()
+        setGeneratedCode(code)
+        generatedCodeRef.current = code
+        setShow2FA(true)
+        toast({
+          title: "Código 2FA Generado",
+          description: `Tu código de verificación es: ${code}`,
+        })
+      } else {
+        toast({
+          title: "Error de autenticación",
+          description: "Usuario o contraseña incorrectos",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
       toast({
         title: "Error de autenticación",
-        description: "Usuario o contraseña incorrectos",
+        description: "No se pudo conectar con el servidor",
         variant: "destructive",
       })
     }
@@ -53,7 +62,7 @@ export default function LoginPage() {
     setIsLoading(false)
   }
 
-  const handleVerify2FA = (e: React.FormEvent) => {
+  const handleVerify2FA = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
 
@@ -73,7 +82,7 @@ export default function LoginPage() {
     }
 
     if (cleanedCode === codeToCompare) {
-      const user = validateCredentials(username, password)
+      const user = await validateCredentialsAsync(username, password)
       if (user) {
         if (remember) {
           localStorage.setItem("vetclinic_remember", "true")
