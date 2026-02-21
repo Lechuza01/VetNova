@@ -4,10 +4,10 @@
  */
 
 import { useState, useEffect, useCallback } from "react"
-import { isDbAvailable } from "@/lib/db"
 
-// Fallback to mock data if DB is not available (runtime check)
-const USE_MOCK_DATA = typeof window !== 'undefined' ? !isDbAvailable() : false
+// Always try to use API - fallback to mock only if API fails
+// Don't check dbAvailable in client-side because env vars aren't available
+const USE_MOCK_DATA = false // Always try API first
 
 export function useApi<T>(
   endpoint: string,
@@ -31,14 +31,7 @@ export function useApi<T>(
       setLoading(true)
       setError(null)
 
-      if (USE_MOCK_DATA) {
-        // Fallback to mock data
-        console.warn(`Using mock data for ${endpoint} - Database not available`)
-        setData(null)
-        setLoading(false)
-        return
-      }
-
+      // Always try to fetch from API
       const response = await fetch(endpoint, {
         method: options?.method || "GET",
         headers: {
@@ -48,6 +41,13 @@ export function useApi<T>(
       })
 
       if (!response.ok) {
+        // If API returns 503 (DB not available), log warning but don't throw
+        if (response.status === 503) {
+          console.warn(`API endpoint ${endpoint} returned 503 - Database not available`)
+          setData(null)
+          setLoading(false)
+          return
+        }
         throw new Error(`API error: ${response.statusText}`)
       }
 
@@ -73,12 +73,7 @@ export function useApi<T>(
         setLoading(true)
         setError(null)
 
-        if (USE_MOCK_DATA) {
-          console.warn(`Using mock data for ${endpoint} - Database not available`)
-          setLoading(false)
-          return
-        }
-
+        // Always try to fetch from API
         const response = await fetch(endpoint, {
           method: options?.method || "POST",
           headers: {
