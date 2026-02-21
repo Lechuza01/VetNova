@@ -52,12 +52,23 @@ export async function POST(request: NextRequest) {
 
       // Verify password using pgcrypto crypt function
       // crypt() with the same salt returns the same hash if password matches
-      const verifyResult = await sql.query(
-        `SELECT crypt($1, $2) = $2 as verified`,
-        [password, passwordHash]
-      )
+      let verified = false
+      try {
+        const verifyResult = await sql.query(
+          `SELECT crypt($1, $2) = $2 as verified`,
+          [password, passwordHash]
+        )
+        verified = verifyResult.rows[0]?.verified || false
+      } catch (verifyError: any) {
+        console.error("Password verification error:", verifyError)
+        return NextResponse.json(
+          { error: "Password verification failed", details: verifyError.message },
+          { status: 500 }
+        )
+      }
 
-      if (!verifyResult.rows[0]?.verified) {
+      if (!verified) {
+        console.log("Password verification failed for user:", username)
         return NextResponse.json(
           { error: "Invalid credentials" },
           { status: 401 }
