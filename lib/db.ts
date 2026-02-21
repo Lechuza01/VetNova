@@ -5,20 +5,13 @@
 
 import { sql } from "@vercel/postgres"
 
-// Check if database is available
-let dbAvailable = false
-
-try {
-  // Try to connect to verify availability
-  if (process.env.POSTGRES_URL) {
-    dbAvailable = true
-  }
-} catch (error) {
-  console.warn("Database not available, using mock data fallback")
-  dbAvailable = false
+// Check if database is available (runtime check)
+export function isDbAvailable(): boolean {
+  return !!process.env.POSTGRES_URL
 }
 
-export { dbAvailable }
+// For backward compatibility
+export const dbAvailable = isDbAvailable()
 
 /**
  * Execute a SQL query

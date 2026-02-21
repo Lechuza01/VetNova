@@ -3,14 +3,9 @@
  * POST /api/auth/login - Authenticate user with username/email and password
  */
 
-/**
- * API Route for Login
- * POST /api/auth/login - Authenticate user with username/email and password
- */
-
 import { NextRequest, NextResponse } from "next/server"
 import * as userQueries from "@/lib/db/queries/users"
-import { dbAvailable } from "@/lib/db"
+import { isDbAvailable } from "@/lib/db"
 import { sql } from "@vercel/postgres"
 
 export async function POST(request: NextRequest) {
@@ -26,7 +21,7 @@ export async function POST(request: NextRequest) {
     }
 
     // If database is available, check against DB
-    if (dbAvailable) {
+    if (isDbAvailable()) {
       // Get user and password hash from database
       const result = await sql.query(
         `SELECT id, username, email, name, role, phone, address, birth_date, password_hash 

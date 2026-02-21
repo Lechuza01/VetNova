@@ -4,10 +4,10 @@
  */
 
 import { useState, useEffect, useCallback } from "react"
-import { dbAvailable } from "@/lib/db"
+import { isDbAvailable } from "@/lib/db"
 
-// Fallback to mock data if DB is not available
-const USE_MOCK_DATA = !dbAvailable
+// Fallback to mock data if DB is not available (runtime check)
+const USE_MOCK_DATA = typeof window !== 'undefined' ? !isDbAvailable() : false
 
 export function useApi<T>(
   endpoint: string,

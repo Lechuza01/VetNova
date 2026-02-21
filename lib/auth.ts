@@ -63,7 +63,12 @@ export function validateCredentials(username: string, password: string): User | 
 export async function validateCredentialsAsync(username: string, password: string): Promise<User | null> {
   try {
     // Try to authenticate via API (which uses database)
-    const response = await fetch("/api/auth/login", {
+    // Use absolute URL in production, relative in development
+    const apiUrl = typeof window !== 'undefined' 
+      ? '/api/auth/login' 
+      : `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/auth/login`
+    
+    const response = await fetch(apiUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ username, password }),
@@ -74,8 +79,14 @@ export async function validateCredentialsAsync(username: string, password: strin
       return user as User
     }
 
-    // If API fails (DB not available), fall back to mock data
-    return validateCredentials(username, password)
+    // If API returns 503 (DB not available) or 404, fall back to mock data
+    if (response.status === 503 || response.status === 404) {
+      console.warn("Database not available, using mock data")
+      return validateCredentials(username, password)
+    }
+
+    // For other errors (401, 500), return null
+    return null
   } catch (error) {
     console.warn("Database authentication failed, using mock data:", error)
     // Fallback to mock data
