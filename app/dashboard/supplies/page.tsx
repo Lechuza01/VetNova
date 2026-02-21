@@ -20,19 +20,90 @@ import { Badge } from "@/components/ui/badge"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { FaPlus, FaEdit, FaTrash, FaSearch, FaExclamationTriangle } from "react-icons/fa"
-import { useClinic } from "@/contexts/clinic-context"
 import { useToast } from "@/hooks/use-toast"
+import { useInventory } from "@/lib/hooks/use-api"
 
 export default function SuppliesPage() {
-  const { inventory, addInventoryItem, deleteInventoryItem } = useClinic()
   const { toast } = useToast()
+  const { data: inventory = [], loading: inventoryLoading, mutate: refreshInventory } = useInventory()
   const [searchTerm, setSearchTerm] = useState("")
   const [filterCategory, setFilterCategory] = useState<string>("all")
   const [dialogOpen, setDialogOpen] = useState(false)
 
-  const supplies = inventory.filter((item) => ["supply", "food"].includes(item.category))
+  const supplies = inventory.filter((item: any) => ["supply", "food"].includes(item.category))
 
-  const filteredSupplies = supplies.filter((item) => {
+  // Wrapper functions for API calls
+  const addInventoryItem = async (item: any) => {
+    try {
+      const response = await fetch("/api/inventory", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: item.name,
+          category: item.category,
+          quantity: item.quantity,
+          unit: item.unit,
+          minStock: item.minStock,
+          maxStock: item.maxStock,
+          price: item.price,
+          supplier: item.supplier,
+          notes: item.notes,
+        }),
+      })
+      
+      if (response.ok) {
+        toast({
+          title: "Insumo registrado",
+          description: "El insumo se ha registrado correctamente",
+        })
+        refreshInventory()
+      } else {
+        const error = await response.json()
+        toast({
+          title: "Error",
+          description: error.error || "No se pudo registrar el insumo",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "No se pudo conectar con el servidor",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const deleteInventoryItem = async (id: string) => {
+    try {
+      const response = await fetch(`/api/inventory/${id}`, {
+        method: "DELETE",
+      })
+      
+      if (response.ok) {
+        toast({
+          title: "Insumo eliminado",
+          description: "El insumo se ha eliminado correctamente",
+        })
+        refreshInventory()
+      } else {
+        const error = await response.json()
+        toast({
+          title: "Error",
+          description: error.error || "No se pudo eliminar el insumo",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "No se pudo conectar con el servidor",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const filteredSupplies = supplies.filter((item: any) => {
     if (filterCategory !== "all" && item.category !== filterCategory) return false
     return item.name.toLowerCase().includes(searchTerm.toLowerCase())
   })
@@ -68,13 +139,9 @@ export default function SuppliesPage() {
               <DialogDescription>Completa los datos del insumo</DialogDescription>
             </DialogHeader>
             <InventoryForm
-              onSubmit={(item) => {
-                addInventoryItem(item)
+              onSubmit={async (item) => {
+                await addInventoryItem(item)
                 setDialogOpen(false)
-                toast({
-                  title: "Insumo registrado",
-                  description: "El insumo se ha registrado correctamente",
-                })
               }}
               onCancel={() => setDialogOpen(false)}
               categories={["supply", "food"]}

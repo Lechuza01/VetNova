@@ -18,7 +18,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "@/components/ui/separator"
 import { FaShoppingCart, FaPlus, FaMinus, FaTrash, FaSearch, FaStar, FaFilter, FaCreditCard, FaWallet, FaHistory, FaCheckCircle } from "react-icons/fa"
 import { useCart } from "@/contexts/cart-context"
-import { useOrders } from "@/contexts/orders-context"
 import { marketplaceProducts } from "@/lib/marketplace-data"
 import type { MarketplaceProduct, PaymentMethod } from "@/lib/types"
 import { useToast } from "@/hooks/use-toast"
@@ -26,6 +25,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
 import Image from "next/image"
 import { useAuth } from "@/contexts/auth-context"
+import { useOrders } from "@/lib/hooks/use-api"
 
 const categories = [
   { value: "all", label: "Todas las categorías" },
@@ -38,13 +38,14 @@ const categories = [
 ]
 
 export default function MarketplacePage() {
+  const { user } = useAuth()
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("all")
   const [cartDialogOpen, setCartDialogOpen] = useState(false)
   const [showSuccessDialog, setShowSuccessDialog] = useState(false)
   const [orderDetails, setOrderDetails] = useState<{ total: number; paymentMethod: PaymentMethod; items: any[]; cardNumber?: string } | null>(null)
   const { items, addToCart, removeFromCart, updateQuantity, getTotal, getItemCount } = useCart()
-  const { orders } = useOrders()
+  const { data: orders = [], loading: ordersLoading, mutate: refreshOrders } = useOrders(user?.role === "cliente" ? { clientId: user.id } : undefined)
   const { toast } = useToast()
 
   const filteredProducts = marketplaceProducts.filter((product) => {
@@ -315,7 +316,6 @@ function CartContent({
   onOrderComplete: (details: { total: number; paymentMethod: PaymentMethod; items: any[]; cardNumber?: string }) => void
 }) {
   const { toast } = useToast()
-  const { addOrder } = useOrders()
   const { clearCart } = useCart()
   const { user } = useAuth()
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("credit_card")
@@ -324,7 +324,7 @@ function CartContent({
   // Fecha de vencimiento fija
   const cardExpiry = "12/25"
 
-  const handleCheckout = () => {
+  const handleCheckout = async () => {
     if (items.length === 0) {
       toast({
         title: "Carrito vacío",
@@ -352,31 +352,57 @@ function CartContent({
       price: item.product?.price || 0,
     }))
 
-    addOrder({
-      items: orderItems,
-      total,
-      paymentMethod,
-      status: "completed",
-    })
+    try {
+      // Get clientId from user
+      const clientId = user?.id // TODO: Get actual clientId from user
+      
+      const response = await fetch("/api/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          clientId: clientId || "temp", // TODO: Fix clientId
+          items: orderItems,
+          total,
+          paymentMethod,
+          status: "completed",
+        }),
+      })
 
-    // Guardar detalles de la orden para el pop-up (incluyendo número de tarjeta antes de limpiarlo)
-    const savedCardNumber = cardNumber
-    
-    const orderDetails = {
-      total,
-      paymentMethod,
-      items: orderItems,
-      cardNumber: savedCardNumber,
+      if (response.ok) {
+        // Guardar detalles de la orden para el pop-up (incluyendo número de tarjeta antes de limpiarlo)
+        const savedCardNumber = cardNumber
+        
+        const orderDetails = {
+          total,
+          paymentMethod,
+          items: orderItems,
+          cardNumber: savedCardNumber,
+        }
+
+        // Limpiar el carrito
+        clearCart()
+        onClearCart()
+
+        // Limpiar campos de tarjeta (restaurar valores por defecto)
+        setCardNumber("1234 5678 9012 3456")
+
+        // Notificar al componente padre para mostrar el diálogo de confirmación
+        onOrderComplete(orderDetails)
+      } else {
+        const error = await response.json()
+        toast({
+          title: "Error",
+          description: error.error || "No se pudo crear la orden",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "No se pudo conectar con el servidor",
+        variant: "destructive",
+      })
     }
-
-    // Limpiar el carrito
-    clearCart()
-    onClearCart()
-
-    // Limpiar campos de tarjeta (restaurar valores por defecto)
-    setCardNumber("1234 5678 9012 3456")
-
-    // Notificar al componente padre para mostrar el diálogo de confirmación
     onOrderComplete(orderDetails)
   }
 

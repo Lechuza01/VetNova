@@ -7,14 +7,14 @@
 
 import { NextRequest, NextResponse } from "next/server"
 import * as appointmentQueries from "@/lib/db/queries/appointments"
-import { dbAvailable } from "@/lib/db"
+import { isDbAvailable } from "@/lib/db"
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    if (!dbAvailable) {
+    if (!isDbAvailable()) {
       return NextResponse.json(
         { error: "Database not available" },
         { status: 503 }
@@ -46,7 +46,7 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    if (!dbAvailable) {
+    if (!isDbAvailable()) {
       return NextResponse.json(
         { error: "Database not available" },
         { status: 503 }
@@ -87,7 +87,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    if (!dbAvailable) {
+    if (!isDbAvailable()) {
       return NextResponse.json(
         { error: "Database not available" },
         { status: 503 }

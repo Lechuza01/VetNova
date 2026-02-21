@@ -6,11 +6,11 @@
 
 import { NextRequest, NextResponse } from "next/server"
 import * as petQueries from "@/lib/db/queries/pets"
-import { dbAvailable } from "@/lib/db"
+import { isDbAvailable } from "@/lib/db"
 
 export async function GET(request: NextRequest) {
   try {
-    if (!dbAvailable) {
+    if (!isDbAvailable()) {
       return NextResponse.json(
         { error: "Database not available" },
         { status: 503 }
@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    if (!dbAvailable) {
+    if (!isDbAvailable()) {
       return NextResponse.json(
         { error: "Database not available" },
         { status: 503 }
@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { name, clientId, animalId, breedId, birthDate, weight, color, microchipNumber, photo, notes } = body
+    const { name, clientId, animalId, breedId, species, breed, birthDate, weight, color, microchipNumber, photo, notes } = body
 
     if (!name || !clientId) {
       return NextResponse.json(
@@ -56,11 +56,51 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Resolve animalId from species name if not provided
+    let resolvedAnimalId = animalId
+    if (!resolvedAnimalId && species) {
+      const { sql } = await import("@vercel/postgres")
+      const animalResult = await sql.query(
+        `SELECT id FROM animals WHERE name = $1 LIMIT 1`,
+        [species]
+      )
+      if (animalResult.rows.length > 0) {
+        resolvedAnimalId = animalResult.rows[0].id
+      } else {
+        // Create animal if it doesn't exist
+        const newAnimalResult = await sql.query(
+          `INSERT INTO animals (name) VALUES ($1) RETURNING id`,
+          [species]
+        )
+        resolvedAnimalId = newAnimalResult.rows[0].id
+      }
+    }
+
+    // Resolve breedId from breed name if not provided
+    let resolvedBreedId = breedId
+    if (!resolvedBreedId && breed && resolvedAnimalId) {
+      const { sql } = await import("@vercel/postgres")
+      const breedResult = await sql.query(
+        `SELECT id FROM breeds WHERE animal_id = $1 AND name = $2 LIMIT 1`,
+        [resolvedAnimalId, breed]
+      )
+      if (breedResult.rows.length > 0) {
+        resolvedBreedId = breedResult.rows[0].id
+      } else {
+        // Create breed if it doesn't exist
+        const newBreedResult = await sql.query(
+          `INSERT INTO breeds (animal_id, name) VALUES ($1, $2) RETURNING id`,
+          [resolvedAnimalId, breed]
+        )
+        resolvedBreedId = newBreedResult.rows[0].id
+      }
+    }
+
     const pet = await petQueries.createPet({
       name,
       clientId,
-      animalId,
-      breedId,
+      animalId: resolvedAnimalId,
+      breedId: resolvedBreedId,
       birthDate,
       weight,
       color,

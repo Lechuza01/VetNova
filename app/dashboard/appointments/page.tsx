@@ -22,26 +22,129 @@ import { Textarea } from "@/components/ui/textarea"
 import { Calendar } from "@/components/ui/calendar"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { FaPlus, FaEdit, FaTrash, FaCheck } from "react-icons/fa"
-import { useClinic } from "@/contexts/clinic-context"
 import { useAuth } from "@/contexts/auth-context"
 import { useNotifications } from "@/contexts/notifications-context"
-import { mockUsers } from "@/lib/auth"
-import type { User } from "@/lib/types"
 import { useToast } from "@/hooks/use-toast"
 import type { Branch } from "@/lib/types"
+import { useAppointments, usePets, useClients, useUsers } from "@/lib/hooks/use-api"
+import { mockBranches } from "@/lib/branches-data"
 
 export default function AppointmentsPage() {
-  const { appointments, pets, clients, branches, addAppointment, updateAppointment, deleteAppointment } = useClinic()
   const { user: currentUser } = useAuth()
+  const { toast } = useToast()
+  const { data: appointments = [], loading: appointmentsLoading, mutate: refreshAppointments } = useAppointments()
+  const { data: pets = [] } = usePets()
+  const { data: clients = [] } = useClients()
+  const { data: users = [] } = useUsers()
+  const branches = mockBranches // TODO: Create branches API
   const [selectedDate, setSelectedDate] = useState<Date>(new Date())
   const [filterStatus, setFilterStatus] = useState<string>("all")
   const [editingVet, setEditingVet] = useState<string | null>(null)
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<string>("")
 
   // Obtener lista de veterinarios y profesionales (veterinarian, admin)
-  const professionals = Object.values(mockUsers)
-    .map((u) => u.user)
-    .filter((u) => u.role === "veterinarian" || u.role === "admin")
+  const professionals = users.filter((u: any) => u.role === "veterinarian" || u.role === "admin")
+
+  // Wrapper functions for API calls
+  const addAppointment = async (appointment: any) => {
+    try {
+      const response = await fetch("/api/appointments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          petId: appointment.petId,
+          clientId: appointment.clientId,
+          veterinarianId: appointment.veterinarianId,
+          branchId: appointment.branchId,
+          appointmentDate: appointment.appointmentDate,
+          appointmentTime: appointment.appointmentTime,
+          reason: appointment.reason,
+          notes: appointment.notes,
+        }),
+      })
+      
+      if (response.ok) {
+        toast({
+          title: "Turno creado",
+          description: "El turno se ha creado correctamente",
+        })
+        refreshAppointments()
+      } else {
+        const error = await response.json()
+        toast({
+          title: "Error",
+          description: error.error || "No se pudo crear el turno",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "No se pudo conectar con el servidor",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const updateAppointment = async (id: string, updates: any) => {
+    try {
+      const response = await fetch(`/api/appointments/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updates),
+      })
+      
+      if (response.ok) {
+        toast({
+          title: "Turno actualizado",
+          description: "El turno se ha actualizado correctamente",
+        })
+        refreshAppointments()
+      } else {
+        const error = await response.json()
+        toast({
+          title: "Error",
+          description: error.error || "No se pudo actualizar el turno",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "No se pudo conectar con el servidor",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const deleteAppointment = async (id: string) => {
+    try {
+      const response = await fetch(`/api/appointments/${id}`, {
+        method: "DELETE",
+      })
+      
+      if (response.ok) {
+        toast({
+          title: "Turno eliminado",
+          description: "El turno se ha eliminado correctamente",
+        })
+        refreshAppointments()
+      } else {
+        const error = await response.json()
+        toast({
+          title: "Error",
+          description: error.error || "No se pudo eliminar el turno",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "No se pudo conectar con el servidor",
+        variant: "destructive",
+      })
+    }
+  }
 
   // Si es cliente, mostrar vista de disponibilidad
   if (currentUser?.role === "cliente") {

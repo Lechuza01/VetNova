@@ -40,13 +40,26 @@ import { Textarea } from "@/components/ui/textarea"
 import { FaPlus, FaEdit, FaTrash, FaSearch, FaDog, FaCat, FaFileAlt, FaExclamationTriangle, FaUserTimes, FaPrint } from "react-icons/fa"
 import Image from "next/image"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { useClinic } from "@/contexts/clinic-context"
 import { useAuth } from "@/contexts/auth-context"
 import { useToast } from "@/hooks/use-toast"
+import { usePets, useClients, useMedicalRecords, useInventory } from "@/lib/hooks/use-api"
 
 export default function PetsPage() {
-  const { pets, clients, medicalRecords, inventory, addPet, addMedicalRecord, updatePet } = useClinic()
   const { user } = useAuth()
+  const { toast } = useToast()
+  
+  // Fetch clients first to get clientId for client users
+  const { data: clients = [], loading: clientsLoading } = useClients()
+  
+  // Find clientId for client users
+  const clientIdForUser = user?.role === "cliente" 
+    ? clients.find((c: any) => c.email === user.email || c.name === user.name)?.id
+    : undefined
+  
+  // Fetch data from API
+  const { data: pets = [], loading: petsLoading, mutate: refreshPets } = usePets(clientIdForUser)
+  const { data: medicalRecords = [], loading: recordsLoading, mutate: refreshRecords } = useMedicalRecords()
+  const { data: inventory = [], loading: inventoryLoading } = useInventory()
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedPet, setSelectedPet] = useState<string | null>(null)
   const [statusDialogOpen, setStatusDialogOpen] = useState<Record<string, boolean>>({})
@@ -55,13 +68,79 @@ export default function PetsPage() {
   const [vaccinationCertDialogOpen, setVaccinationCertDialogOpen] = useState(false)
   const [selectedPetForCert, setSelectedPetForCert] = useState<string | null>(null)
 
-  // Si es cliente, filtrar solo sus mascotas
-  const clientPets = user?.role === "cliente" 
-    ? pets.filter((pet) => {
-        const client = clients.find((c) => c.id === pet.clientId)
-        return client && (client.email === user.email || client.name === user.name)
+  const clientPets = pets || []
+
+  // Wrapper functions for API calls
+  const addMedicalRecord = async (record: any) => {
+    try {
+      const response = await fetch("/api/medical-records", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          petId: record.petId,
+          veterinarianId: user?.id,
+          serviceType: record.serviceType || "consulta",
+          reason: record.reason,
+          diagnosis: record.diagnosis,
+          treatment: record.treatment,
+          notes: record.notes,
+          attachments: record.attachments,
+        }),
       })
-    : pets
+      
+      if (response.ok) {
+        toast({
+          title: "Registro creado",
+          description: "El registro médico se ha creado correctamente",
+        })
+        refreshRecords()
+      } else {
+        const error = await response.json()
+        toast({
+          title: "Error",
+          description: error.error || "No se pudo crear el registro",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "No se pudo conectar con el servidor",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const updatePet = async (id: string, data: any) => {
+    try {
+      const response = await fetch(`/api/pets/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      })
+      
+      if (response.ok) {
+        toast({
+          title: "Mascota actualizada",
+          description: "Los datos de la mascota se han actualizado correctamente",
+        })
+        refreshPets()
+      } else {
+        const error = await response.json()
+        toast({
+          title: "Error",
+          description: error.error || "No se pudo actualizar la mascota",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "No se pudo conectar con el servidor",
+        variant: "destructive",
+      })
+    }
+  }
 
   const filteredPets = clientPets.filter(
     (pet) =>
@@ -114,7 +193,50 @@ export default function PetsPage() {
                   <DialogTitle>Registrar Nueva Mascota</DialogTitle>
                   <DialogDescription>Completa los datos de la mascota</DialogDescription>
                 </DialogHeader>
-                <PetForm clients={clients} onSubmit={addPet} />
+                <PetForm 
+                  clients={clients} 
+                  onSubmit={async (petData) => {
+                    try {
+                      const response = await fetch("/api/pets", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    name: petData.name,
+                    clientId: petData.clientId,
+                    species: petData.species, // API will resolve animalId from this
+                    breed: petData.breed, // API will resolve breedId from this
+                    birthDate: petData.birthDate,
+                    weight: petData.weight,
+                    color: petData.color,
+                    microchipNumber: petData.microchipNumber || undefined,
+                    photo: petData.photo || undefined,
+                    notes: petData.notes || undefined,
+                  }),
+                      })
+                      
+                      if (response.ok) {
+                        toast({
+                          title: "Mascota creada",
+                          description: "La mascota se ha registrado correctamente",
+                        })
+                        refreshPets()
+                      } else {
+                        const error = await response.json()
+                        toast({
+                          title: "Error",
+                          description: error.error || "No se pudo crear la mascota",
+                          variant: "destructive",
+                        })
+                      }
+                    } catch (error) {
+                      toast({
+                        title: "Error",
+                        description: "No se pudo conectar con el servidor",
+                        variant: "destructive",
+                      })
+                    }
+                  }} 
+                />
               </DialogContent>
             </Dialog>
           </div>
@@ -125,12 +247,15 @@ export default function PetsPage() {
         <CardHeader>
           <CardTitle>Lista de Mascotas</CardTitle>
           <CardDescription>
-            {user?.role === "cliente" 
+            {petsLoading ? "Cargando..." : user?.role === "cliente" 
               ? `Tus mascotas (${clientPets.length})`
-              : `Total de ${pets.length} mascotas registradas`}
+              : `Total de ${clientPets.length} mascotas registradas`}
           </CardDescription>
         </CardHeader>
         <CardContent>
+          {petsLoading && (
+            <div className="text-center py-8">Cargando mascotas...</div>
+          )}
           <div className="mb-4">
             <div className="relative">
               <FaSearch className="absolute left-3 top-3 text-muted-foreground" />
@@ -316,7 +441,7 @@ export default function PetsPage() {
             <DialogTitle>Registrar Consulta o Servicio</DialogTitle>
             <DialogDescription>
               {selectedPetForService
-                ? `Mascota: ${pets.find((p) => p.id === selectedPetForService)?.name || "Desconocida"}`
+                ? `Mascota: ${clientPets.find((p: any) => p.id === selectedPetForService)?.name || "Desconocida"}`
                 : "Añadir nueva entrada al historial clínico"}
             </DialogDescription>
           </DialogHeader>
@@ -324,10 +449,46 @@ export default function PetsPage() {
             <MedicalRecordForm
               petId={selectedPetForService}
               inventory={inventory}
-              onSubmit={(record) => {
-                addMedicalRecord(record)
-                setNewServiceDialogOpen(false)
-                setSelectedPetForService(null)
+              onSubmit={async (record) => {
+                try {
+                  const response = await fetch("/api/medical-records", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      petId: record.petId,
+                      veterinarianId: user?.id,
+                      serviceType: record.serviceType || "consulta",
+                      reason: record.reason,
+                      diagnosis: record.diagnosis,
+                      treatment: record.treatment,
+                      notes: record.notes,
+                      attachments: record.attachments,
+                    }),
+                  })
+                  
+                  if (response.ok) {
+                    toast({
+                      title: "Registro creado",
+                      description: "El registro médico se ha creado correctamente",
+                    })
+                    refreshRecords()
+                    setNewServiceDialogOpen(false)
+                    setSelectedPetForService(null)
+                  } else {
+                    const error = await response.json()
+                    toast({
+                      title: "Error",
+                      description: error.error || "No se pudo crear el registro",
+                      variant: "destructive",
+                    })
+                  }
+                } catch (error) {
+                  toast({
+                    title: "Error",
+                    description: "No se pudo conectar con el servidor",
+                    variant: "destructive",
+                  })
+                }
               }}
             />
           )}
@@ -337,9 +498,9 @@ export default function PetsPage() {
       {/* Modal de Certificado de Vacunación */}
       {selectedPetForCert && (
         <VaccinationCertificate
-          pet={pets.find((p) => p.id === selectedPetForCert)}
+          pet={clientPets.find((p: any) => p.id === selectedPetForCert)}
           vaccinations={getPetVaccinations(selectedPetForCert)}
-          clientName={getClientName(pets.find((p) => p.id === selectedPetForCert)?.clientId || "")}
+          clientName={getClientName(clientPets.find((p: any) => p.id === selectedPetForCert)?.clientId || "")}
           open={vaccinationCertDialogOpen}
           onOpenChange={setVaccinationCertDialogOpen}
         />

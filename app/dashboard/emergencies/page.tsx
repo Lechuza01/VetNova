@@ -18,13 +18,13 @@ import {
 } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { FaExclamationTriangle, FaPlus, FaPhone, FaClock, FaAmbulance } from "react-icons/fa"
-import { useClinic } from "@/contexts/clinic-context"
 import { useAuth } from "@/contexts/auth-context"
 import { useToast } from "@/hooks/use-toast"
 import { formatDistanceToNow } from "date-fns"
 import { es } from "date-fns/locale"
 import { EmergencyForm } from "@/components/emergency-form"
-import { mockUsers } from "@/lib/auth"
+import { useEmergencies, usePets, useClients, useUsers } from "@/lib/hooks/use-api"
+import { mockBranches } from "@/lib/branches-data"
 
 interface Emergency {
   id: string
@@ -40,38 +40,14 @@ interface Emergency {
   notes?: string
 }
 
-const mockEmergencies: Emergency[] = [
-  {
-    id: "1",
-    petId: "1",
-    clientId: "1",
-    reportedBy: "Dr. María González",
-    reportedAt: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
-    priority: "critical",
-    description: "Accidente de tráfico",
-    symptoms: "Fractura visible en pata trasera, sangrado moderado",
-    status: "in_progress",
-    assignedTo: "Dr. Carlos Ruiz",
-  },
-  {
-    id: "2",
-    petId: "3",
-    clientId: "2",
-    reportedBy: "Ana López",
-    reportedAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-    priority: "high",
-    description: "Dificultad respiratoria",
-    symptoms: "Jadeo excesivo, encías azuladas",
-    status: "resolved",
-    assignedTo: "Dr. María González",
-  },
-]
-
 export default function EmergenciesPage() {
-  const { pets, clients, branches } = useClinic()
   const { user } = useAuth()
   const { toast } = useToast()
-  const [emergencies, setEmergencies] = useState<Emergency[]>(mockEmergencies)
+  const { data: emergencies = [], loading: emergenciesLoading, mutate: refreshEmergencies } = useEmergencies()
+  const { data: pets = [] } = usePets()
+  const { data: clients = [] } = useClients()
+  const { data: users = [] } = useUsers()
+  const branches = mockBranches // TODO: Create branches API
   const [filterStatus, setFilterStatus] = useState<"all" | Emergency["status"]>("all")
   const [newDialogOpen, setNewDialogOpen] = useState(false)
   const [emergencyConfirmationOpen, setEmergencyConfirmationOpen] = useState(false)
@@ -120,42 +96,64 @@ export default function EmergenciesPage() {
     return <Badge variant={config.variant}>{config.label}</Badge>
   }
 
-  const handleAddEmergency = (data: Omit<Emergency, "id" | "reportedBy" | "reportedAt">) => {
-    const newEmergency: Emergency = {
-      ...data,
-      id: Date.now().toString(),
-      reportedBy: user?.name || "Usuario",
-      reportedAt: new Date().toISOString(),
-    }
-    setEmergencies((prev) => [newEmergency, ...prev])
-    
-    // Si es cliente, mostrar información de la sucursal de emergencias
-    if (user?.role === "cliente") {
-      // Buscar sucursal con servicio de urgencias (preferiblemente 24 horas)
-      const emergencyBranch = branches.find((b) => 
-        b.services.includes("urgencias") && b.isActive
-      ) || branches.find((b) => b.services.includes("urgencias"))
+  const handleAddEmergency = async (data: Omit<Emergency, "id" | "reportedBy" | "reportedAt">) => {
+    try {
+      const response = await fetch("/api/emergencies", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          petId: data.petId,
+          clientId: data.clientId,
+          priority: data.priority,
+          description: data.description,
+          symptoms: data.symptoms,
+          status: data.status || "pending",
+          assignedTo: data.assignedTo,
+          notes: data.notes,
+        }),
+      })
       
-      if (emergencyBranch) {
-        const veterinarian = Object.values(mockUsers)
-          .map((u) => u.user)
-          .find((u) => u.id === emergencyBranch.chiefVeterinarianId)
-        
-        setLastEmergencyData({
-          branchName: emergencyBranch.name,
-          branchAddress: `${emergencyBranch.address}, ${emergencyBranch.city}`,
-          veterinarianName: veterinarian?.name || "Dr. Carlos Ruiz",
+      if (response.ok) {
+        // Si es cliente, mostrar información de la sucursal de emergencias
+        if (user?.role === "cliente") {
+          // Buscar sucursal con servicio de urgencias (preferiblemente 24 horas)
+          const emergencyBranch = branches.find((b: any) => 
+            b.services.includes("urgencias") && b.isActive
+          ) || branches.find((b: any) => b.services.includes("urgencias"))
+          
+          if (emergencyBranch) {
+            const veterinarian = users.find((u: any) => u.id === emergencyBranch.chiefVeterinarianId)
+            
+            setLastEmergencyData({
+              branchName: emergencyBranch.name,
+              branchAddress: `${emergencyBranch.address}, ${emergencyBranch.city}`,
+              veterinarianName: veterinarian?.name || "Dr. Carlos Ruiz",
+            })
+            setEmergencyConfirmationOpen(true)
+          }
+        } else {
+          toast({
+            title: "Emergencia registrada",
+            description: "La emergencia se ha registrado correctamente",
+          })
+        }
+        refreshEmergencies()
+        setNewDialogOpen(false)
+      } else {
+        const error = await response.json()
+        toast({
+          title: "Error",
+          description: error.error || "No se pudo registrar la emergencia",
+          variant: "destructive",
         })
-        setEmergencyConfirmationOpen(true)
       }
-    } else {
+    } catch (error) {
       toast({
-        title: "Emergencia registrada",
-        description: "La emergencia se ha registrado correctamente",
+        title: "Error",
+        description: "No se pudo conectar con el servidor",
+        variant: "destructive",
       })
     }
-    
-    setNewDialogOpen(false)
   }
 
   const handleRequestAmbulance = () => {
