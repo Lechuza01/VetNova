@@ -76,8 +76,13 @@ export async function validateCredentialsAsync(username: string, password: strin
 
     if (response.ok) {
       const user = await response.json()
+      console.log("Login successful from database:", user)
       return user as User
     }
+
+    // Get error message for debugging
+    const errorData = await response.json().catch(() => ({}))
+    console.warn("Login API error:", response.status, errorData)
 
     // If API returns 503 (DB not available) or 404, fall back to mock data
     if (response.status === 503 || response.status === 404) {
@@ -85,8 +90,15 @@ export async function validateCredentialsAsync(username: string, password: strin
       return validateCredentials(username, password)
     }
 
-    // For other errors (401, 500), return null
-    return null
+    // For 401 (invalid credentials), don't fallback to mock - return null
+    if (response.status === 401) {
+      console.warn("Invalid credentials from database")
+      return null
+    }
+
+    // For other errors (500, etc), try mock data as fallback
+    console.warn("API error, falling back to mock data")
+    return validateCredentials(username, password)
   } catch (error) {
     console.warn("Database authentication failed, using mock data:", error)
     // Fallback to mock data
