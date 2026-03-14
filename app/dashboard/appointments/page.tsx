@@ -420,24 +420,25 @@ export default function AppointmentsPage() {
                     .map((appointment) => {
                       if (!appointment) return null
                       return (
-                      <div key={appointment.id} className="flex items-center justify-between p-3 border rounded-lg">
-                        <div className="flex items-center gap-3">
-                          <div className="bg-primary/10 text-primary px-3 py-1 rounded font-medium text-sm">
-                            {appointment.time}
+                        <div key={appointment.id} className="flex items-center justify-between p-3 border rounded-lg">
+                          <div className="flex items-center gap-3">
+                            <div className="bg-primary/10 text-primary px-3 py-1 rounded font-medium text-sm">
+                              {appointment.time}
+                            </div>
+                            <div>
+                              <p className="font-medium">
+                                {getPetName(appointment.petId)} - {getClientName(appointment.clientId)}
+                              </p>
+                              <p className="text-sm text-muted-foreground">{appointment.reason}</p>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                Sucursal: {getBranchName(appointment.branchId)} | Veterinario: {getVeterinarianName(appointment.veterinarianId)}
+                              </p>
+                            </div>
                           </div>
-                          <div>
-                            <p className="font-medium">
-                              {getPetName(appointment.petId)} - {getClientName(appointment.clientId)}
-                            </p>
-                            <p className="text-sm text-muted-foreground">{appointment.reason}</p>
-                            <p className="text-xs text-muted-foreground mt-1">
-                              Sucursal: {getBranchName(appointment.branchId)} | Veterinario: {getVeterinarianName(appointment.veterinarianId)}
-                            </p>
-                          </div>
+                          {getStatusBadge(appointment.status)}
                         </div>
-                        {getStatusBadge(appointment.status)}
-                      </div>
-                    ))}
+                      )
+                    })}
                   {safeAppointments.filter((apt) => apt?.date === selectedDate.toISOString().split("T")[0]).length === 0 && (
                     <div className="text-center py-8 text-muted-foreground">
                       No hay turnos programados para esta fecha
@@ -470,10 +471,15 @@ function AppointmentForm({
   const [selectedVeterinarian, setSelectedVeterinarian] = useState<string>("")
   const [selectedBranch, setSelectedBranch] = useState<string>("")
 
+  const safePets = Array.isArray(pets) ? pets : []
+  const safeClients = Array.isArray(clients) ? clients : []
+  const safeProfessionals = Array.isArray(professionals) ? professionals : []
+  const safeBranches = Array.isArray(branches) ? branches : []
+
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     const formData = new FormData(e.currentTarget)
-    const pet = pets.find((p) => p.id === selectedPet)
+    const pet = safePets.find((p) => p?.id === selectedPet)
     const appointment = {
       id: Date.now().toString(),
       petId: selectedPet,
@@ -538,11 +544,14 @@ function AppointmentForm({
               <SelectValue placeholder="Seleccionar sucursal" />
             </SelectTrigger>
             <SelectContent>
-              {branches.filter((b) => b.isActive).map((branch) => (
-                <SelectItem key={branch.id} value={branch.id}>
-                  {branch.name}
-                </SelectItem>
-              ))}
+              {safeBranches.filter((b) => b?.isActive).map((branch) => {
+                if (!branch) return null
+                return (
+                  <SelectItem key={branch.id} value={branch.id}>
+                    {branch.name}
+                  </SelectItem>
+                )
+              })}
             </SelectContent>
           </Select>
         </div>
@@ -553,11 +562,14 @@ function AppointmentForm({
               <SelectValue placeholder="Seleccionar veterinario" />
             </SelectTrigger>
             <SelectContent>
-              {professionals.map((prof) => (
-                <SelectItem key={prof.id} value={prof.id}>
-                  {prof.name} ({prof.role === "admin" ? "Administrador" : "Veterinario"})
-                </SelectItem>
-              ))}
+              {safeProfessionals.map((prof) => {
+                if (!prof) return null
+                return (
+                  <SelectItem key={prof.id} value={prof.id}>
+                    {prof.name} ({prof.role === "admin" ? "Administrador" : "Veterinario"})
+                  </SelectItem>
+                )
+              })}
             </SelectContent>
           </Select>
         </div>
@@ -597,7 +609,8 @@ function ClientAvailabilityView({
 }) {
   const { user: currentUser } = useAuth()
   const { addNotification } = useNotifications()
-  const { branches } = useClinic()
+  const { data: users = [] } = useUsers()
+  const branches = mockBranches // TODO: Create branches API
   const [selectedDate, setSelectedDate] = useState<Date>(new Date())
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<string>("")
   const [selectedPet, setSelectedPet] = useState<string>("")
@@ -609,10 +622,9 @@ function ClientAvailabilityView({
   const [appointmentDetails, setAppointmentDetails] = useState<{ date: string; time: string; pet: string; reason: string; branch: string } | null>(null)
   const { toast } = useToast()
 
-  // Obtener lista de veterinarios y profesionales
-  const professionals = Object.values(mockUsers)
-    .map((u) => u.user)
-    .filter((u) => u.role === "veterinarian" || u.role === "admin")
+  // Obtener lista de veterinarios y profesionales desde la API
+  const safeUsers = Array.isArray(users) ? users : []
+  const professionals = safeUsers.filter((u: any) => u?.role === "veterinarian" || u?.role === "admin")
 
   // Obtener mascotas del cliente actual (buscando por email o nombre)
   const safePets = Array.isArray(pets) ? pets : []
