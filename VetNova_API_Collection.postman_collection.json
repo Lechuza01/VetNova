@@ -1,0 +1,1079 @@
+{
+	"info": {
+		"_postman_id": "vetnova-api-collection",
+		"name": "VetNova API Collection",
+		"description": "Colección completa de APIs para VetNova - Sistema de Gestión Veterinaria",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "🔐 Autenticación",
+			"item": [
+				{
+					"name": "Login",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"admin\",\n  \"password\": \"admin123\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/login",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "auth", "login"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "👥 Usuarios",
+			"item": [
+				{
+					"name": "Obtener todos los usuarios",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/users",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "users"]
+						}
+					}
+				},
+				{
+					"name": "Crear usuario",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"nuevo_usuario\",\n  \"email\": \"usuario@example.com\",\n  \"name\": \"Nombre Completo\",\n  \"passwordHash\": \"hash_generado\",\n  \"role\": \"admin\",\n  \"phone\": \"+1234567890\",\n  \"address\": \"Dirección\",\n  \"birthDate\": \"1990-01-01\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/users",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "users"]
+						}
+					}
+				},
+				{
+					"name": "Obtener usuario por ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/users/:id",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "users", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "uuid-del-usuario"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Actualizar usuario",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Nombre Actualizado\",\n  \"phone\": \"+9876543210\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/users/:id",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "users", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "uuid-del-usuario"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Eliminar usuario",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/users/:id",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "users", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "uuid-del-usuario"
+								}
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "👤 Clientes",
+			"item": [
+				{
+					"name": "Obtener todos los clientes",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/clients",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "clients"]
+						}
+					}
+				},
+				{
+					"name": "Crear cliente",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"firstName\": \"Juan\",\n  \"lastName\": \"Pérez\",\n  \"email\": \"juan@example.com\",\n  \"phone\": \"+1234567890\",\n  \"dniCuit\": \"12345678\",\n  \"address\": \"Calle 123\",\n  \"city\": \"Buenos Aires\",\n  \"postalCode\": \"1234\",\n  \"birthDate\": \"1990-01-01\",\n  \"gender\": \"male\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/clients",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "clients"]
+						}
+					}
+				},
+				{
+					"name": "Obtener cliente por ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/clients/:id",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "clients", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "uuid-del-cliente"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Actualizar cliente",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"phone\": \"+9876543210\",\n  \"address\": \"Nueva Dirección\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/clients/:id",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "clients", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "uuid-del-cliente"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Eliminar cliente",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/clients/:id",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "clients", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "uuid-del-cliente"
+								}
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "🐾 Mascotas",
+			"item": [
+				{
+					"name": "Obtener todas las mascotas",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/pets",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "pets"]
+						}
+					}
+				},
+				{
+					"name": "Obtener mascotas por cliente",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/pets?clientId=:clientId",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "pets"],
+							"query": [
+								{
+									"key": "clientId",
+									"value": "uuid-del-cliente"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Crear mascota",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Firulais\",\n  \"clientId\": \"uuid-del-cliente\",\n  \"species\": \"Perro\",\n  \"breed\": \"Labrador\",\n  \"birthDate\": \"2020-01-15\",\n  \"weight\": 25.5,\n  \"color\": \"Dorado\",\n  \"microchipNumber\": \"123456789\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/pets",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "pets"]
+						}
+					}
+				},
+				{
+					"name": "Obtener mascota por ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/pets/:id",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "pets", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "uuid-de-mascota"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Actualizar mascota",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"weight\": 27.0,\n  \"color\": \"Dorado claro\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/pets/:id",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "pets", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "uuid-de-mascota"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Eliminar mascota",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/pets/:id",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "pets", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "uuid-de-mascota"
+								}
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "📅 Turnos",
+			"item": [
+				{
+					"name": "Obtener todos los turnos",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/appointments",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "appointments"]
+						}
+					}
+				},
+				{
+					"name": "Obtener turnos pendientes",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/appointments?status=pending",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "appointments"],
+							"query": [
+								{
+									"key": "status",
+									"value": "pending"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Obtener turnos por cliente",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/appointments?clientId=:clientId",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "appointments"],
+							"query": [
+								{
+									"key": "clientId",
+									"value": "uuid-del-cliente"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Crear turno",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"petId\": \"uuid-de-mascota\",\n  \"clientId\": \"uuid-de-cliente\",\n  \"veterinarianId\": \"uuid-de-veterinario\",\n  \"branchId\": \"uuid-de-sucursal\",\n  \"date\": \"2025-02-20\",\n  \"time\": \"10:00\",\n  \"reason\": \"Consulta general\",\n  \"status\": \"pending\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/appointments",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "appointments"]
+						}
+					}
+				},
+				{
+					"name": "Obtener turno por ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/appointments/:id",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "appointments", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "uuid-del-turno"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Actualizar turno",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"status\": \"confirmed\",\n  \"time\": \"10:30\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/appointments/:id",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "appointments", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "uuid-del-turno"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Eliminar turno",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/appointments/:id",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "appointments", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "uuid-del-turno"
+								}
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "🚨 Emergencias",
+			"item": [
+				{
+					"name": "Obtener todas las emergencias",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/emergencies",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "emergencies"]
+						}
+					}
+				},
+				{
+					"name": "Obtener emergencias por cliente",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/emergencies?clientId=:clientId",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "emergencies"],
+							"query": [
+								{
+									"key": "clientId",
+									"value": "uuid-del-cliente"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Crear emergencia",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"petId\": \"uuid-de-mascota\",\n  \"clientId\": \"uuid-de-cliente\",\n  \"reportedBy\": \"uuid-de-usuario\",\n  \"priority\": \"high\",\n  \"description\": \"Descripción de la emergencia\",\n  \"symptoms\": \"Síntomas observados\",\n  \"assignedTo\": \"uuid-de-veterinario\",\n  \"assignedBranchId\": \"uuid-de-sucursal\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/emergencies",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "emergencies"]
+						}
+					}
+				},
+				{
+					"name": "Obtener emergencia por ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/emergencies/:id",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "emergencies", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "uuid-de-emergencia"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Actualizar emergencia",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"status\": \"in_progress\",\n  \"priority\": \"critical\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/emergencies/:id",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "emergencies", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "uuid-de-emergencia"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Eliminar emergencia",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/emergencies/:id",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "emergencies", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "uuid-de-emergencia"
+								}
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "📋 Historial Médico",
+			"item": [
+				{
+					"name": "Obtener todos los registros médicos",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/medical-records",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "medical-records"]
+						}
+					}
+				},
+				{
+					"name": "Obtener registros por mascota",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/medical-records?petId=:petId",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "medical-records"],
+							"query": [
+								{
+									"key": "petId",
+									"value": "uuid-de-mascota"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Crear registro médico",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"petId\": \"uuid-de-mascota\",\n  \"veterinarianId\": \"uuid-de-veterinario\",\n  \"serviceType\": \"consultation\",\n  \"reason\": \"Motivo de la consulta\",\n  \"diagnosis\": \"Diagnóstico\",\n  \"treatment\": \"Tratamiento aplicado\",\n  \"observations\": \"Observaciones\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/medical-records",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "medical-records"]
+						}
+					}
+				},
+				{
+					"name": "Obtener registro médico por ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/medical-records/:id",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "medical-records", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "uuid-del-registro"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Actualizar registro médico",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"diagnosis\": \"Diagnóstico actualizado\",\n  \"treatment\": \"Nuevo tratamiento\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/medical-records/:id",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "medical-records", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "uuid-del-registro"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Eliminar registro médico",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/medical-records/:id",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "medical-records", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "uuid-del-registro"
+								}
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "📦 Inventario",
+			"item": [
+				{
+					"name": "Obtener todos los items",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/inventory",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "inventory"]
+						}
+					}
+				},
+				{
+					"name": "Obtener items por categoría",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/inventory?category=medicine",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "inventory"],
+							"query": [
+								{
+									"key": "category",
+									"value": "medicine",
+									"description": "medicine | supply | equipment | food | toy"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Buscar items",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/inventory?search=antibiotico",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "inventory"],
+							"query": [
+								{
+									"key": "search",
+									"value": "antibiotico"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Crear item de inventario",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Antibiótico X\",\n  \"category\": \"medicine\",\n  \"description\": \"Descripción del producto\",\n  \"unitOfMeasure\": \"unidades\",\n  \"minStock\": 10,\n  \"price\": 25.50,\n  \"supplier\": \"Proveedor ABC\",\n  \"expiryDate\": \"2025-12-31\"\n}\n\n// Categorías disponibles: 'medicine', 'supply', 'equipment', 'food', 'toy'"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/inventory",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "inventory"]
+						}
+					}
+				},
+				{
+					"name": "Obtener item por ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/inventory/:id",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "inventory", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "uuid-del-item"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Actualizar item",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"price\": 27.00,\n  \"minStock\": 15\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/inventory/:id",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "inventory", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "uuid-del-item"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Eliminar item",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/inventory/:id",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "inventory", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "uuid-del-item"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Obtener movimientos de inventario",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/inventory/:id/movements",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "inventory", ":id", "movements"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "uuid-del-item"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Crear movimiento de inventario",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"movementType\": \"ingreso\",\n  \"quantity\": 50,\n  \"reason\": \"Compra inicial\",\n  \"createdBy\": \"uuid-de-usuario\",\n  \"notes\": \"Stock inicial\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/inventory/:id/movements",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "inventory", ":id", "movements"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "uuid-del-item"
+								}
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "🛒 Órdenes",
+			"item": [
+				{
+					"name": "Obtener todas las órdenes",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/orders",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "orders"]
+						}
+					}
+				},
+				{
+					"name": "Obtener órdenes por cliente",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/orders?clientId=:clientId",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "orders"],
+							"query": [
+								{
+									"key": "clientId",
+									"value": "uuid-del-cliente"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Crear orden",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"clientId\": \"uuid-de-cliente\",\n  \"userId\": \"uuid-de-usuario\",\n  \"items\": [\n    {\n      \"productId\": \"uuid-del-producto\",\n      \"quantity\": 2,\n      \"price\": 15.99\n    }\n  ],\n  \"totalAmount\": 31.98,\n  \"paymentMethod\": \"credit_card\",\n  \"shippingAddress\": \"Dirección de envío\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/orders",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "orders"]
+						}
+					}
+				},
+				{
+					"name": "Obtener orden por ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/orders/:id",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "orders", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "uuid-de-orden"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Actualizar estado de orden",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"status\": \"shipped\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/orders/:id",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "orders", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "uuid-de-orden"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Eliminar orden",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/orders/:id",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "orders", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "uuid-de-orden"
+								}
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "🧪 Pruebas",
+			"item": [
+				{
+					"name": "Test DB Connection",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/test-db",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "test-db"]
+						}
+					}
+				},
+				{
+					"name": "Test Login",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"admin\",\n  \"password\": \"admin123\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/test-login",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "test-login"]
+						}
+					}
+				}
+			]
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:3000",
+			"type": "string"
+		}
+	]
+}

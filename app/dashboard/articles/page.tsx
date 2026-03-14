@@ -32,7 +32,7 @@ export default function ArticlesPage() {
 
   // Ensure inventory is always an array
   const safeInventory = Array.isArray(inventory) ? inventory : []
-  const articles = safeInventory.filter((item: any) => item && ["medicine", "equipment"].includes(item.category))
+  const articles = safeInventory.filter((item: any) => item && ["medicine", "equipment", "toy"].includes(item.category))
 
   // Wrapper functions for API calls
   const addInventoryItem = async (item: any) => {
@@ -141,6 +141,7 @@ export default function ArticlesPage() {
     const variants: Record<string, { variant: "default" | "secondary"; label: string }> = {
       medicine: { variant: "default", label: "Medicamento" },
       equipment: { variant: "secondary", label: "Equipo" },
+      toy: { variant: "secondary", label: "Juguete" },
     }
     const config = variants[category] || variants.medicine
     return <Badge variant={config.variant}>{config.label}</Badge>
@@ -169,7 +170,7 @@ export default function ArticlesPage() {
               onSubmit={async (item) => {
                 await addInventoryItem(item)
               }} 
-              categories={["medicine", "equipment"]} 
+              categories={["medicine", "equipment", "toy"]} 
             />
           </DialogContent>
         </Dialog>
@@ -216,6 +217,7 @@ export default function ArticlesPage() {
                 <SelectItem value="all">Todos</SelectItem>
                 <SelectItem value="medicine">Medicamentos</SelectItem>
                 <SelectItem value="equipment">Equipos</SelectItem>
+                <SelectItem value="toy">Juguetes</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -300,12 +302,20 @@ export default function ArticlesPage() {
 }
 
 function InventoryForm({ onSubmit, categories }: { onSubmit: (item: any) => void; categories: string[] }) {
+  const [selectedCategory, setSelectedCategory] = useState<string>("")
+  
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     const formData = new FormData(e.currentTarget)
+    
+    if (!selectedCategory) {
+      alert("Por favor selecciona una categoría")
+      return
+    }
+    
     const item = {
       name: formData.get("name") as string,
-      category: formData.get("category") as any,
+      category: selectedCategory, // Usar el estado en lugar de FormData
       description: formData.get("description") as string || undefined,
       unitOfMeasure: formData.get("unitOfMeasure") as string || undefined,
       quantity: Number.parseInt(formData.get("quantity") as string) || 0,
@@ -316,6 +326,8 @@ function InventoryForm({ onSubmit, categories }: { onSubmit: (item: any) => void
       notes: formData.get("notes") as string || undefined,
     }
     onSubmit(item)
+    // Reset form
+    setSelectedCategory("")
   }
 
   return (
@@ -327,13 +339,14 @@ function InventoryForm({ onSubmit, categories }: { onSubmit: (item: any) => void
         </div>
         <div className="space-y-2">
           <Label htmlFor="category">Categoría *</Label>
-          <Select name="category" required>
+          <Select value={selectedCategory} onValueChange={setSelectedCategory} required>
             <SelectTrigger>
               <SelectValue placeholder="Seleccionar categoría" />
             </SelectTrigger>
             <SelectContent>
               {categories.includes("medicine") && <SelectItem value="medicine">Medicamento</SelectItem>}
               {categories.includes("equipment") && <SelectItem value="equipment">Equipo</SelectItem>}
+              {categories.includes("toy") && <SelectItem value="toy">Juguete</SelectItem>}
             </SelectContent>
           </Select>
         </div>

@@ -107,7 +107,7 @@ export interface SpaGroomingAppointment {
 export interface InventoryItem {
   id: string
   name: string
-  category: "medicine" | "supply" | "equipment" | "food"
+  category: "medicine" | "supply" | "equipment" | "food" | "toy"
   quantity: number
   minStock: number
   price: number

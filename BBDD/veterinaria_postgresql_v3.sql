@@ -22,7 +22,7 @@
     CREATE TYPE hospitalization_status AS ENUM ('active', 'discharged', 'transferred');
     CREATE TYPE service_type AS ENUM ('consulta', 'estudio');
     CREATE TYPE branch_type AS ENUM ('veterinaria_shop', 'veterinaria_clinica');
-    CREATE TYPE inventory_category AS ENUM ('medicine', 'supply', 'equipment', 'food');
+    CREATE TYPE inventory_category AS ENUM ('medicine', 'supply', 'equipment', 'food', 'toy');
     CREATE TYPE product_category AS ENUM ('food', 'toys', 'accessories', 'medicine', 'hygiene', 'other');
     CREATE TYPE payment_method AS ENUM ('credit_card', 'debit_card', 'mercadopago');
     CREATE TYPE order_status AS ENUM ('completed', 'pending', 'cancelled');

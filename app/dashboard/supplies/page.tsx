@@ -287,12 +287,20 @@ function InventoryForm({
   onCancel?: () => void
   categories: string[]
 }) {
+  const [selectedCategory, setSelectedCategory] = useState<string>("")
+  
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     const formData = new FormData(e.currentTarget)
+    
+    if (!selectedCategory) {
+      alert("Por favor selecciona una categoría")
+      return
+    }
+    
     const item = {
       name: formData.get("name") as string,
-      category: formData.get("category") as any,
+      category: selectedCategory, // Usar el estado en lugar de FormData
       description: formData.get("description") as string || undefined,
       unitOfMeasure: formData.get("unitOfMeasure") as string || undefined,
       quantity: Number.parseInt(formData.get("quantity") as string) || 0,
@@ -303,6 +311,8 @@ function InventoryForm({
       notes: formData.get("notes") as string || undefined,
     }
     onSubmit(item)
+    // Reset form
+    setSelectedCategory("")
   }
 
   return (
@@ -314,7 +324,7 @@ function InventoryForm({
         </div>
         <div className="space-y-2">
           <Label htmlFor="category">Categoría *</Label>
-          <Select name="category" required>
+          <Select value={selectedCategory} onValueChange={setSelectedCategory} required>
             <SelectTrigger>
               <SelectValue placeholder="Seleccionar categoría" />
             </SelectTrigger>
