@@ -184,9 +184,9 @@ export default function UsersPage() {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    filteredUsers.map((user: any) => {
-                      if (!user) return null
-                      return (
+                    filteredUsers
+                      .filter((user: any) => user)
+                      .map((user: any) => (
                         <TableRow key={user.id}>
                           <TableCell className="font-medium">{user.name || "Sin nombre"}</TableCell>
                           <TableCell>{user.email || "-"}</TableCell>
@@ -230,8 +230,7 @@ export default function UsersPage() {
                             </div>
                           </TableCell>
                         </TableRow>
-                      )
-                    })}
+                      ))
                   )}
                 </TableBody>
               </Table>
