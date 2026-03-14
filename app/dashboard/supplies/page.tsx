@@ -30,28 +30,51 @@ export default function SuppliesPage() {
   const [filterCategory, setFilterCategory] = useState<string>("all")
   const [dialogOpen, setDialogOpen] = useState(false)
 
-  const supplies = inventory.filter((item: any) => ["supply", "food"].includes(item.category))
+  // Ensure inventory is always an array
+  const safeInventory = Array.isArray(inventory) ? inventory : []
+  const supplies = safeInventory.filter((item: any) => item && ["supply", "food"].includes(item.category))
 
   // Wrapper functions for API calls
   const addInventoryItem = async (item: any) => {
     try {
+      // Primero crear el item de inventario
       const response = await fetch("/api/inventory", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: item.name,
           category: item.category,
-          quantity: item.quantity,
-          unit: item.unit,
+          description: item.description || undefined,
+          unitOfMeasure: item.unitOfMeasure || undefined,
           minStock: item.minStock,
-          maxStock: item.maxStock,
           price: item.price,
-          supplier: item.supplier,
-          notes: item.notes,
+          supplier: item.supplier || undefined,
+          expiryDate: item.expiryDate || undefined,
+          notes: item.notes || undefined,
         }),
       })
       
       if (response.ok) {
+        const createdItem = await response.json()
+        
+        // Si hay cantidad inicial, crear un movimiento de inventario tipo "ingreso"
+        if (item.quantity && item.quantity > 0) {
+          const movementResponse = await fetch(`/api/inventory/${createdItem.id}/movements`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              movementType: "ingreso",
+              quantity: item.quantity,
+              reason: "Stock inicial",
+              notes: "Stock inicial al crear el item",
+            }),
+          })
+          
+          if (!movementResponse.ok) {
+            console.warn("Item creado pero no se pudo registrar el movimiento de stock inicial")
+          }
+        }
+        
         toast({
           title: "Insumo registrado",
           description: "El insumo se ha registrado correctamente",
@@ -268,15 +291,16 @@ function InventoryForm({
     e.preventDefault()
     const formData = new FormData(e.currentTarget)
     const item = {
-      id: Date.now().toString(),
       name: formData.get("name") as string,
       category: formData.get("category") as any,
-      quantity: Number.parseInt(formData.get("quantity") as string),
-      minStock: Number.parseInt(formData.get("minStock") as string),
-      price: Number.parseFloat(formData.get("price") as string),
-      supplier: formData.get("supplier") as string,
-      expiryDate: formData.get("expiryDate") as string,
-      notes: formData.get("notes") as string,
+      description: formData.get("description") as string || undefined,
+      unitOfMeasure: formData.get("unitOfMeasure") as string || undefined,
+      quantity: Number.parseInt(formData.get("quantity") as string) || 0,
+      minStock: Number.parseInt(formData.get("minStock") as string) || 0,
+      price: Number.parseFloat(formData.get("price") as string) || 0,
+      supplier: formData.get("supplier") as string || undefined,
+      expiryDate: formData.get("expiryDate") as string || undefined,
+      notes: formData.get("notes") as string || undefined,
     }
     onSubmit(item)
   }
@@ -302,18 +326,27 @@ function InventoryForm({
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
+      <div className="space-y-2">
+        <Label htmlFor="description">Descripción</Label>
+        <Textarea id="description" name="description" placeholder="Descripción del insumo..." rows={2} />
+      </div>
+
+      <div className="grid grid-cols-4 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="quantity">Cantidad *</Label>
-          <Input id="quantity" name="quantity" type="number" required placeholder="0" />
+          <Label htmlFor="quantity">Cantidad Inicial *</Label>
+          <Input id="quantity" name="quantity" type="number" required placeholder="0" defaultValue="0" />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="unitOfMeasure">Unidad de Medida</Label>
+          <Input id="unitOfMeasure" name="unitOfMeasure" placeholder="kg, litros, unidades..." />
         </div>
         <div className="space-y-2">
           <Label htmlFor="minStock">Stock Mínimo *</Label>
-          <Input id="minStock" name="minStock" type="number" required placeholder="0" />
+          <Input id="minStock" name="minStock" type="number" required placeholder="0" defaultValue="0" />
         </div>
         <div className="space-y-2">
           <Label htmlFor="price">Precio (€) *</Label>
-          <Input id="price" name="price" type="number" step="0.01" required placeholder="0.00" />
+          <Input id="price" name="price" type="number" step="0.01" required placeholder="0.00" defaultValue="0" />
         </div>
       </div>
 

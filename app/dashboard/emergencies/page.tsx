@@ -53,25 +53,36 @@ export default function EmergenciesPage() {
   const [emergencyConfirmationOpen, setEmergencyConfirmationOpen] = useState(false)
   const [lastEmergencyData, setLastEmergencyData] = useState<{ branchName: string; branchAddress: string; veterinarianName: string } | null>(null)
 
+  // Ensure arrays are always arrays
+  const safeEmergencies = Array.isArray(emergencies) ? emergencies : []
+  const safePets = Array.isArray(pets) ? pets : []
+  const safeClients = Array.isArray(clients) ? clients : []
+  const safeUsers = Array.isArray(users) ? users : []
+  const safeBranches = Array.isArray(branches) ? branches : []
+
   // Si es cliente, solo mostrar sus propias emergencias
   const clientEmergencies = user?.role === "cliente"
-    ? emergencies.filter((e) => {
-        const client = clients.find((c) => c.id === e.clientId)
+    ? safeEmergencies.filter((e) => {
+        if (!e) return false
+        const client = safeClients.find((c) => c?.id === e.clientId)
         return client && (client.email === user.email || client.name === user.name)
       })
-    : emergencies
+    : safeEmergencies
 
   const filteredEmergencies = clientEmergencies.filter((e) => {
+    if (!e) return false
     if (filterStatus === "all") return true
     return e.status === filterStatus
   })
 
   const getPetInfo = (petId: string) => {
-    return pets.find((p) => p.id === petId)
+    if (!petId) return null
+    return safePets.find((p) => p?.id === petId)
   }
 
   const getClientInfo = (clientId: string) => {
-    return clients.find((c) => c.id === clientId)
+    if (!clientId) return null
+    return safeClients.find((c) => c?.id === clientId)
   }
 
   const getPriorityBadge = (priority: Emergency["priority"]) => {
@@ -117,12 +128,12 @@ export default function EmergenciesPage() {
         // Si es cliente, mostrar información de la sucursal de emergencias
         if (user?.role === "cliente") {
           // Buscar sucursal con servicio de urgencias (preferiblemente 24 horas)
-          const emergencyBranch = branches.find((b: any) => 
-            b.services.includes("urgencias") && b.isActive
-          ) || branches.find((b: any) => b.services.includes("urgencias"))
+          const emergencyBranch = safeBranches.find((b: any) => 
+            b?.services?.includes("urgencias") && b?.isActive
+          ) || safeBranches.find((b: any) => b?.services?.includes("urgencias"))
           
           if (emergencyBranch) {
-            const veterinarian = users.find((u: any) => u.id === emergencyBranch.chiefVeterinarianId)
+            const veterinarian = safeUsers.find((u: any) => u?.id === emergencyBranch.chiefVeterinarianId)
             
             setLastEmergencyData({
               branchName: emergencyBranch.name,
@@ -186,11 +197,12 @@ export default function EmergenciesPage() {
               <DialogDescription>Completa los datos de la emergencia</DialogDescription>
             </DialogHeader>
             <EmergencyForm 
-              pets={user?.role === "cliente" ? pets.filter((pet) => {
-                const client = clients.find((c) => c.id === pet.clientId)
+              pets={user?.role === "cliente" ? safePets.filter((pet) => {
+                if (!pet) return false
+                const client = safeClients.find((c) => c?.id === pet.clientId)
                 return client && (client.email === user.email || client.name === user.name)
-              }) : pets} 
-              clients={clients} 
+              }) : safePets} 
+              clients={safeClients} 
               currentUser={user}
               onSubmit={handleAddEmergency} 
             />
@@ -208,7 +220,7 @@ export default function EmergenciesPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-destructive">
-              {emergencies.filter((e) => e.priority === "critical" && e.status !== "resolved").length}
+              {safeEmergencies.filter((e) => e && e.priority === "critical" && e.status !== "resolved").length}
             </div>
             <p className="text-xs text-muted-foreground">Urgentes</p>
           </CardContent>
@@ -220,7 +232,7 @@ export default function EmergenciesPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {emergencies.filter((e) => e.status === "in_progress").length}
+              {safeEmergencies.filter((e) => e && e.status === "in_progress").length}
             </div>
             <p className="text-xs text-muted-foreground">Activas</p>
           </CardContent>
@@ -232,7 +244,7 @@ export default function EmergenciesPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {emergencies.filter((e) => e.status === "pending").length}
+              {safeEmergencies.filter((e) => e && e.status === "pending").length}
             </div>
             <p className="text-xs text-muted-foreground">Sin asignar</p>
           </CardContent>
@@ -243,7 +255,7 @@ export default function EmergenciesPage() {
             <FaExclamationTriangle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{emergencies.length}</div>
+            <div className="text-2xl font-bold">{safeEmergencies.length}</div>
             <p className="text-xs text-muted-foreground">Este mes</p>
           </CardContent>
         </Card>
@@ -309,6 +321,7 @@ export default function EmergenciesPage() {
           ) : (
             <div className="space-y-4">
               {filteredEmergencies.map((emergency) => {
+                if (!emergency) return null
                 const pet = getPetInfo(emergency.petId)
                 const client = getClientInfo(emergency.clientId)
 

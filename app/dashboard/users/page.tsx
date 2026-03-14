@@ -43,10 +43,16 @@ export default function UsersPage() {
     return null
   }
 
-  const filteredUsers = (users || []).filter(
-    (user) =>
-      user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchTerm.toLowerCase()),
+  // Ensure users is always an array
+  const safeUsers = Array.isArray(users) ? users : []
+  const filteredUsers = safeUsers.filter(
+    (user) => {
+      if (!user) return false
+      const name = user.name?.toLowerCase() || ""
+      const email = user.email?.toLowerCase() || ""
+      const search = searchTerm.toLowerCase()
+      return name.includes(search) || email.includes(search)
+    }
   )
 
   const getRoleBadge = (role: string) => {
@@ -178,7 +184,9 @@ export default function UsersPage() {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    filteredUsers.map((user: any) => (
+                    filteredUsers.map((user: any) => {
+                      if (!user) return null
+                      return (
                       <TableRow key={user.id}>
                         <TableCell className="font-medium">{user.name}</TableCell>
                         <TableCell>{user.email}</TableCell>
@@ -222,7 +230,8 @@ export default function UsersPage() {
                           </div>
                         </TableCell>
                       </TableRow>
-                    ))
+                      )
+                    })}
                   )}
                 </TableBody>
               </Table>

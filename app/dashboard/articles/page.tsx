@@ -20,21 +20,122 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge"
 import { Textarea } from "@/components/ui/textarea"
 import { FaPlus, FaEdit, FaTrash, FaSearch, FaExclamationTriangle } from "react-icons/fa"
-import { useClinic } from "@/contexts/clinic-context"
+import { useToast } from "@/hooks/use-toast"
+import { useInventory } from "@/lib/hooks/use-api"
 
 export default function ArticlesPage() {
-  const { inventory, addInventoryItem, updateInventoryItem, deleteInventoryItem } = useClinic()
+  const { toast } = useToast()
+  const { data: inventory = [], loading: inventoryLoading, mutate: refreshInventory } = useInventory()
   const [searchTerm, setSearchTerm] = useState("")
   const [filterCategory, setFilterCategory] = useState<string>("all")
+  const [dialogOpen, setDialogOpen] = useState(false)
 
-  const articles = inventory.filter((item) => ["medicine", "equipment"].includes(item.category))
+  // Ensure inventory is always an array
+  const safeInventory = Array.isArray(inventory) ? inventory : []
+  const articles = safeInventory.filter((item: any) => item && ["medicine", "equipment"].includes(item.category))
 
-  const filteredArticles = articles.filter((item) => {
+  // Wrapper functions for API calls
+  const addInventoryItem = async (item: any) => {
+    try {
+      // Primero crear el item de inventario
+      const response = await fetch("/api/inventory", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: item.name,
+          category: item.category,
+          description: item.description || undefined,
+          unitOfMeasure: item.unitOfMeasure || undefined,
+          minStock: item.minStock,
+          price: item.price,
+          supplier: item.supplier || undefined,
+          expiryDate: item.expiryDate || undefined,
+          notes: item.notes || undefined,
+        }),
+      })
+      
+      if (response.ok) {
+        const createdItem = await response.json()
+        
+        // Si hay cantidad inicial, crear un movimiento de inventario tipo "ingreso"
+        if (item.quantity && item.quantity > 0) {
+          const movementResponse = await fetch(`/api/inventory/${createdItem.id}/movements`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              movementType: "ingreso",
+              quantity: item.quantity,
+              reason: "Stock inicial",
+              notes: "Stock inicial al crear el item",
+            }),
+          })
+          
+          if (!movementResponse.ok) {
+            console.warn("Item creado pero no se pudo registrar el movimiento de stock inicial")
+          }
+        }
+        
+        toast({
+          title: "Artículo registrado",
+          description: "El artículo se ha registrado correctamente",
+        })
+        refreshInventory()
+        setDialogOpen(false)
+      } else {
+        const error = await response.json()
+        toast({
+          title: "Error",
+          description: error.error || "No se pudo registrar el artículo",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "No se pudo conectar con el servidor",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const deleteInventoryItem = async (id: string) => {
+    try {
+      const response = await fetch(`/api/inventory/${id}`, {
+        method: "DELETE",
+      })
+      
+      if (response.ok) {
+        toast({
+          title: "Artículo eliminado",
+          description: "El artículo se ha eliminado correctamente",
+        })
+        refreshInventory()
+      } else {
+        const error = await response.json()
+        toast({
+          title: "Error",
+          description: error.error || "No se pudo eliminar el artículo",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "No se pudo conectar con el servidor",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const filteredArticles = articles.filter((item: any) => {
+    if (!item) return false
     if (filterCategory !== "all" && item.category !== filterCategory) return false
-    return item.name.toLowerCase().includes(searchTerm.toLowerCase())
+    const name = item.name?.toLowerCase() || ""
+    const search = searchTerm.toLowerCase()
+    return name.includes(search)
   })
 
-  const lowStockArticles = articles.filter((item) => item.quantity <= item.minStock)
+  const lowStockArticles = articles.filter((item: any) => item && item.quantity <= item.minStock)
 
   const getCategoryBadge = (category: string) => {
     const variants: Record<string, { variant: "default" | "secondary"; label: string }> = {
@@ -52,7 +153,7 @@ export default function ArticlesPage() {
           <h1 className="text-3xl font-bold text-foreground">Artículos</h1>
           <p className="text-muted-foreground mt-1">Gestión de medicamentos y equipos</p>
         </div>
-        <Dialog>
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
             <Button>
               <FaPlus className="mr-2" />
@@ -64,7 +165,12 @@ export default function ArticlesPage() {
               <DialogTitle>Registrar Nuevo Artículo</DialogTitle>
               <DialogDescription>Completa los datos del artículo</DialogDescription>
             </DialogHeader>
-            <InventoryForm onSubmit={addInventoryItem} categories={["medicine", "equipment"]} />
+            <InventoryForm 
+              onSubmit={async (item) => {
+                await addInventoryItem(item)
+              }} 
+              categories={["medicine", "equipment"]} 
+            />
           </DialogContent>
         </Dialog>
       </div>
@@ -98,7 +204,9 @@ export default function ArticlesPage() {
           <div className="flex items-center justify-between">
             <div>
               <CardTitle>Lista de Artículos</CardTitle>
-              <CardDescription>Total de {filteredArticles.length} artículos</CardDescription>
+              <CardDescription>
+                {inventoryLoading ? "Cargando..." : `Total de ${filteredArticles.length} artículos`}
+              </CardDescription>
             </div>
             <Select value={filterCategory} onValueChange={setFilterCategory}>
               <SelectTrigger className="w-[180px]">
@@ -140,31 +248,48 @@ export default function ArticlesPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredArticles.map((item) => (
-                  <TableRow key={item.id} className={item.quantity <= item.minStock ? "bg-destructive/5" : ""}>
-                    <TableCell className="font-medium">{item.name}</TableCell>
-                    <TableCell>{getCategoryBadge(item.category)}</TableCell>
-                    <TableCell>
-                      <span className={item.quantity <= item.minStock ? "text-destructive font-bold" : ""}>
-                        {item.quantity}
-                      </span>
-                    </TableCell>
-                    <TableCell>{item.minStock}</TableCell>
-                    <TableCell>€{item.price.toFixed(2)}</TableCell>
-                    <TableCell>{item.supplier || "-"}</TableCell>
-                    <TableCell>{item.expiryDate ? new Date(item.expiryDate).toLocaleDateString() : "-"}</TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button variant="ghost" size="sm">
-                          <FaEdit className="w-4 h-4" />
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => deleteInventoryItem(item.id)}>
-                          <FaTrash className="w-4 h-4 text-destructive" />
-                        </Button>
-                      </div>
+                {inventoryLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                      Cargando artículos...
                     </TableCell>
                   </TableRow>
-                ))}
+                ) : filteredArticles.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                      No hay artículos registrados
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredArticles.map((item: any) => {
+                    if (!item) return null
+                    return (
+                      <TableRow key={item.id} className={item.quantity <= item.minStock ? "bg-destructive/5" : ""}>
+                        <TableCell className="font-medium">{item.name || "Sin nombre"}</TableCell>
+                        <TableCell>{getCategoryBadge(item.category || "")}</TableCell>
+                        <TableCell>
+                          <span className={item.quantity <= item.minStock ? "text-destructive font-bold" : ""}>
+                            {item.quantity || 0}
+                          </span>
+                        </TableCell>
+                        <TableCell>{item.minStock || 0}</TableCell>
+                        <TableCell>€{(item.price || 0).toFixed(2)}</TableCell>
+                        <TableCell>{item.supplier || "-"}</TableCell>
+                        <TableCell>{item.expiryDate ? new Date(item.expiryDate).toLocaleDateString() : "-"}</TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            <Button variant="ghost" size="sm">
+                              <FaEdit className="w-4 h-4" />
+                            </Button>
+                            <Button variant="ghost" size="sm" onClick={() => deleteInventoryItem(item.id)}>
+                              <FaTrash className="w-4 h-4 text-destructive" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })
+                )}
               </TableBody>
             </Table>
           </div>
@@ -179,15 +304,16 @@ function InventoryForm({ onSubmit, categories }: { onSubmit: (item: any) => void
     e.preventDefault()
     const formData = new FormData(e.currentTarget)
     const item = {
-      id: Date.now().toString(),
       name: formData.get("name") as string,
       category: formData.get("category") as any,
-      quantity: Number.parseInt(formData.get("quantity") as string),
-      minStock: Number.parseInt(formData.get("minStock") as string),
-      price: Number.parseFloat(formData.get("price") as string),
-      supplier: formData.get("supplier") as string,
-      expiryDate: formData.get("expiryDate") as string,
-      notes: formData.get("notes") as string,
+      description: formData.get("description") as string || undefined,
+      unitOfMeasure: formData.get("unitOfMeasure") as string || undefined,
+      quantity: Number.parseInt(formData.get("quantity") as string) || 0,
+      minStock: Number.parseInt(formData.get("minStock") as string) || 0,
+      price: Number.parseFloat(formData.get("price") as string) || 0,
+      supplier: formData.get("supplier") as string || undefined,
+      expiryDate: formData.get("expiryDate") as string || undefined,
+      notes: formData.get("notes") as string || undefined,
     }
     onSubmit(item)
   }
@@ -207,26 +333,33 @@ function InventoryForm({ onSubmit, categories }: { onSubmit: (item: any) => void
             </SelectTrigger>
             <SelectContent>
               {categories.includes("medicine") && <SelectItem value="medicine">Medicamento</SelectItem>}
-              {categories.includes("supply") && <SelectItem value="supply">Insumo</SelectItem>}
               {categories.includes("equipment") && <SelectItem value="equipment">Equipo</SelectItem>}
-              {categories.includes("food") && <SelectItem value="food">Alimento</SelectItem>}
             </SelectContent>
           </Select>
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
+      <div className="space-y-2">
+        <Label htmlFor="description">Descripción</Label>
+        <Textarea id="description" name="description" placeholder="Descripción del artículo..." rows={2} />
+      </div>
+
+      <div className="grid grid-cols-4 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="quantity">Cantidad *</Label>
-          <Input id="quantity" name="quantity" type="number" required placeholder="0" />
+          <Label htmlFor="quantity">Cantidad Inicial *</Label>
+          <Input id="quantity" name="quantity" type="number" required placeholder="0" defaultValue="0" />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="unitOfMeasure">Unidad de Medida</Label>
+          <Input id="unitOfMeasure" name="unitOfMeasure" placeholder="unidades, cajas..." />
         </div>
         <div className="space-y-2">
           <Label htmlFor="minStock">Stock Mínimo *</Label>
-          <Input id="minStock" name="minStock" type="number" required placeholder="0" />
+          <Input id="minStock" name="minStock" type="number" required placeholder="0" defaultValue="0" />
         </div>
         <div className="space-y-2">
           <Label htmlFor="price">Precio (€) *</Label>
-          <Input id="price" name="price" type="number" step="0.01" required placeholder="0.00" />
+          <Input id="price" name="price" type="number" step="0.01" required placeholder="0.00" defaultValue="0" />
         </div>
       </div>
 
