@@ -187,49 +187,49 @@ export default function UsersPage() {
                     filteredUsers.map((user: any) => {
                       if (!user) return null
                       return (
-                      <TableRow key={user.id}>
-                        <TableCell className="font-medium">{user.name}</TableCell>
-                        <TableCell>{user.email}</TableCell>
-                        <TableCell>{getRoleBadge(user.role)}</TableCell>
-                        <TableCell>{user.phone || "-"}</TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button variant="ghost" size="sm">
-                              <FaEdit className="w-4 h-4" />
-                            </Button>
-                            {currentUser?.role === "admin" && user.id !== currentUser.id && (
-                              <Button 
-                                variant="ghost" 
-                                size="sm"
-                                onClick={async () => {
-                                  if (confirm(`¿Estás seguro de eliminar a ${user.name}?`)) {
-                                    try {
-                                      const response = await fetch(`/api/users/${user.id}`, {
-                                        method: "DELETE",
-                                      })
-                                      if (response.ok) {
-                                        toast({
-                                          title: "Usuario eliminado",
-                                          description: "El usuario se ha eliminado correctamente",
-                                        })
-                                        mutate()
-                                      }
-                                    } catch (error) {
-                                      toast({
-                                        title: "Error",
-                                        description: "No se pudo eliminar el usuario",
-                                        variant: "destructive",
-                                      })
-                                    }
-                                  }
-                                }}
-                              >
-                                <FaTrash className="w-4 h-4 text-destructive" />
+                        <TableRow key={user.id}>
+                          <TableCell className="font-medium">{user.name || "Sin nombre"}</TableCell>
+                          <TableCell>{user.email || "-"}</TableCell>
+                          <TableCell>{getRoleBadge(user.role || "")}</TableCell>
+                          <TableCell>{user.phone || "-"}</TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-2">
+                              <Button variant="ghost" size="sm">
+                                <FaEdit className="w-4 h-4" />
                               </Button>
-                            )}
-                          </div>
-                        </TableCell>
-                      </TableRow>
+                              {currentUser?.role === "admin" && user.id !== currentUser.id && (
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm"
+                                  onClick={async () => {
+                                    if (confirm(`¿Estás seguro de eliminar a ${user.name || "este usuario"}?`)) {
+                                      try {
+                                        const response = await fetch(`/api/users/${user.id}`, {
+                                          method: "DELETE",
+                                        })
+                                        if (response.ok) {
+                                          toast({
+                                            title: "Usuario eliminado",
+                                            description: "El usuario se ha eliminado correctamente",
+                                          })
+                                          mutate()
+                                        }
+                                      } catch (error) {
+                                        toast({
+                                          title: "Error",
+                                          description: "No se pudo eliminar el usuario",
+                                          variant: "destructive",
+                                        })
+                                      }
+                                    }
+                                  }}
+                                >
+                                  <FaTrash className="w-4 h-4 text-destructive" />
+                                </Button>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
                       )
                     })}
                   )}
