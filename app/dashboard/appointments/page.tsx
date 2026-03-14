@@ -37,13 +37,19 @@ export default function AppointmentsPage() {
   const { data: clients = [] } = useClients()
   const { data: users = [] } = useUsers()
   const branches = mockBranches // TODO: Create branches API
+
+  // Ensure arrays are always arrays
+  const safeAppointments = Array.isArray(appointments) ? appointments : []
+  const safePets = Array.isArray(pets) ? pets : []
+  const safeClients = Array.isArray(clients) ? clients : []
+  const safeUsers = Array.isArray(users) ? users : []
   const [selectedDate, setSelectedDate] = useState<Date>(new Date())
   const [filterStatus, setFilterStatus] = useState<string>("all")
   const [editingVet, setEditingVet] = useState<string | null>(null)
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<string>("")
 
   // Obtener lista de veterinarios y profesionales (veterinarian, admin)
-  const professionals = users.filter((u: any) => u.role === "veterinarian" || u.role === "admin")
+  const professionals = safeUsers.filter((u: any) => u?.role === "veterinarian" || u?.role === "admin")
 
   // Wrapper functions for API calls
   const addAppointment = async (appointment: any) => {
@@ -148,7 +154,7 @@ export default function AppointmentsPage() {
 
   // Si es cliente, mostrar vista de disponibilidad
   if (currentUser?.role === "cliente") {
-    return <ClientAvailabilityView appointments={appointments} pets={pets} clients={clients} addAppointment={addAppointment} />
+    return <ClientAvailabilityView appointments={safeAppointments} pets={safePets} clients={safeClients} addAppointment={addAppointment} />
   }
 
   const getStatusBadge = (status: string) => {
@@ -162,28 +168,39 @@ export default function AppointmentsPage() {
     return <Badge variant={config.variant}>{config.label}</Badge>
   }
 
-  const getPetName = (petId: string) => pets.find((p) => p.id === petId)?.name || "Desconocido"
-  const getClientName = (clientId: string) => clients.find((c) => c.id === clientId)?.name || "Desconocido"
+  const getPetName = (petId: string) => {
+    if (!petId) return "Desconocido"
+    return safePets.find((p) => p?.id === petId)?.name || "Desconocido"
+  }
+  const getClientName = (clientId: string) => {
+    if (!clientId) return "Desconocido"
+    return safeClients.find((c) => c?.id === clientId)?.name || "Desconocido"
+  }
   const getVeterinarianName = (vetId: string) => {
-    const vet = professionals.find((p) => p.id === vetId)
+    if (!vetId) return "Sin asignar"
+    const vet = professionals.find((p) => p?.id === vetId)
     return vet?.name || "Sin asignar"
   }
   const getBranchName = (branchId: string) => {
-    const branch = branches.find((b) => b.id === branchId)
+    if (!branchId || !Array.isArray(branches)) return "Sin asignar"
+    const branch = branches.find((b) => b?.id === branchId)
     return branch?.name || "Sin asignar"
   }
 
-  const filteredAppointments = appointments.filter((apt) => {
+  const filteredAppointments = safeAppointments.filter((apt) => {
+    if (!apt) return false
     if (filterStatus !== "all" && apt.status !== filterStatus) return false
     return true
   })
 
-  const todayAppointments = appointments.filter((apt) => {
+  const todayAppointments = safeAppointments.filter((apt) => {
+    if (!apt || !apt.date) return false
     const today = new Date().toISOString().split("T")[0]
     return apt.date === today
   })
 
-  const upcomingAppointments = appointments.filter((apt) => {
+  const upcomingAppointments = safeAppointments.filter((apt) => {
+    if (!apt || !apt.date) return false
     const today = new Date().toISOString().split("T")[0]
     return apt.date > today
   })
@@ -238,7 +255,7 @@ export default function AppointmentsPage() {
             <CardTitle className="text-sm font-medium text-muted-foreground">Total Mes</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-foreground">{appointments.length}</div>
+            <div className="text-2xl font-bold text-foreground">{safeAppointments.length}</div>
             <p className="text-xs text-muted-foreground mt-1">Este mes</p>
           </CardContent>
         </Card>
@@ -391,16 +408,18 @@ export default function AppointmentsPage() {
               <CardHeader>
                 <CardTitle>Turnos del {selectedDate.toLocaleDateString()}</CardTitle>
                 <CardDescription>
-                  {appointments.filter((apt) => apt.date === selectedDate.toISOString().split("T")[0]).length} turnos
+                  {safeAppointments.filter((apt) => apt?.date === selectedDate.toISOString().split("T")[0]).length} turnos
                   programados
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {appointments
-                    .filter((apt) => apt.date === selectedDate.toISOString().split("T")[0])
-                    .sort((a, b) => a.time.localeCompare(b.time))
-                    .map((appointment) => (
+                  {safeAppointments
+                    .filter((apt) => apt?.date === selectedDate.toISOString().split("T")[0])
+                    .sort((a, b) => (a?.time || "").localeCompare(b?.time || ""))
+                    .map((appointment) => {
+                      if (!appointment) return null
+                      return (
                       <div key={appointment.id} className="flex items-center justify-between p-3 border rounded-lg">
                         <div className="flex items-center gap-3">
                           <div className="bg-primary/10 text-primary px-3 py-1 rounded font-medium text-sm">
@@ -419,7 +438,7 @@ export default function AppointmentsPage() {
                         {getStatusBadge(appointment.status)}
                       </div>
                     ))}
-                  {appointments.filter((apt) => apt.date === selectedDate.toISOString().split("T")[0]).length === 0 && (
+                  {safeAppointments.filter((apt) => apt?.date === selectedDate.toISOString().split("T")[0]).length === 0 && (
                     <div className="text-center py-8 text-muted-foreground">
                       No hay turnos programados para esta fecha
                     </div>
@@ -459,8 +478,8 @@ function AppointmentForm({
       id: Date.now().toString(),
       petId: selectedPet,
       clientId: pet?.clientId || "",
-      veterinarianId: selectedVeterinarian || professionals[0]?.id || "",
-      branchId: selectedBranch || branches[0]?.id || "",
+      veterinarianId: selectedVeterinarian || safeProfessionals[0]?.id || "",
+      branchId: selectedBranch || safeBranches[0]?.id || "",
       date: formData.get("date") as string,
       time: formData.get("time") as string,
       reason: formData.get("reason") as string,
@@ -470,8 +489,8 @@ function AppointmentForm({
     onSubmit(appointment)
   }
 
-  const selectedPetData = pets.find((p) => p.id === selectedPet)
-  const clientName = selectedPetData ? clients.find((c) => c.id === selectedPetData.clientId)?.name : ""
+  const selectedPetData = safePets.find((p) => p?.id === selectedPet)
+  const clientName = selectedPetData ? safeClients.find((c) => c?.id === selectedPetData.clientId)?.name : ""
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -482,11 +501,12 @@ function AppointmentForm({
             <SelectValue placeholder="Seleccionar mascota" />
           </SelectTrigger>
           <SelectContent>
-            {pets.map((pet) => {
-              const client = clients.find((c) => c.id === pet.clientId)
+            {safePets.map((pet) => {
+              if (!pet) return null
+              const client = safeClients.find((c) => c?.id === pet.clientId)
               return (
                 <SelectItem key={pet.id} value={pet.id}>
-                  {pet.name} ({pet.species}) - {client?.name}
+                  {pet.name} ({pet.species || "N/A"}) - {client?.name || "Sin cliente"}
                 </SelectItem>
               )
             })}
@@ -595,16 +615,22 @@ function ClientAvailabilityView({
     .filter((u) => u.role === "veterinarian" || u.role === "admin")
 
   // Obtener mascotas del cliente actual (buscando por email o nombre)
-  const clientPets = pets.filter((pet) => {
-    const client = clients.find((c) => c.id === pet.clientId)
+  const safePets = Array.isArray(pets) ? pets : []
+  const safeClients = Array.isArray(clients) ? clients : []
+  const safeBranches = Array.isArray(branches) ? branches : []
+  const safeAppointments = Array.isArray(appointments) ? appointments : []
+  
+  const clientPets = safePets.filter((pet) => {
+    if (!pet) return false
+    const client = safeClients.find((c) => c?.id === pet.clientId)
     // Buscar por email o nombre del cliente
     return client && (client.email === currentUser?.email || client.name === currentUser?.name)
   })
 
   // Filtrar sucursales según el servicio seleccionado
-  const availableBranches = branches.filter((branch) => {
-    if (!branch.isActive) return false
-    return branch.services.includes(selectedService)
+  const availableBranches = safeBranches.filter((branch) => {
+    if (!branch || !branch.isActive) return false
+    return branch.services?.includes(selectedService) || false
   })
 
   // Resetear sucursal cuando cambia el servicio
@@ -630,13 +656,14 @@ function ClientAvailabilityView({
 
   // Obtener turnos ocupados para una fecha específica y sucursal
   const getOccupiedSlots = (date: string, branchId: string) => {
-    const dateAppointments = appointments.filter(
+    const dateAppointments = safeAppointments.filter(
       (apt) =>
+        apt &&
         apt.date === date &&
         apt.branchId === branchId &&
         (apt.status === "pending" || apt.status === "confirmed"),
     )
-    return dateAppointments.map((apt) => apt.time)
+    return dateAppointments.map((apt) => apt?.time || "").filter(Boolean)
   }
 
   // Obtener horarios disponibles para la fecha seleccionada y sucursal
@@ -716,8 +743,8 @@ function ClientAvailabilityView({
       return
     }
 
-    const pet = pets.find((p) => p.id === selectedPet)
-    const branch = branches.find((b) => b.id === selectedBranch)
+    const pet = safePets.find((p) => p?.id === selectedPet)
+    const branch = safeBranches.find((b) => b?.id === selectedBranch)
     const appointmentId = Date.now().toString()
     const appointment = {
       id: appointmentId,

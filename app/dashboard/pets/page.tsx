@@ -68,7 +68,7 @@ export default function PetsPage() {
   const [vaccinationCertDialogOpen, setVaccinationCertDialogOpen] = useState(false)
   const [selectedPetForCert, setSelectedPetForCert] = useState<string | null>(null)
 
-  const clientPets = pets || []
+  const clientPets = Array.isArray(pets) ? pets : []
 
   // Wrapper functions for API calls
   const addMedicalRecord = async (record: any) => {
@@ -142,24 +142,31 @@ export default function PetsPage() {
     }
   }
 
-  const filteredPets = clientPets.filter(
-    (pet) =>
-      pet.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      pet.species.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      pet.breed.toLowerCase().includes(searchTerm.toLowerCase()),
+  const filteredPets = (clientPets || []).filter(
+    (pet) => {
+      if (!pet) return false
+      const name = pet.name?.toLowerCase() || ""
+      const species = pet.species?.toLowerCase() || ""
+      const breed = pet.breed?.toLowerCase() || ""
+      const search = searchTerm.toLowerCase()
+      return name.includes(search) || species.includes(search) || breed.includes(search)
+    }
   )
 
   const getClientName = (clientId: string) => {
-    return clients.find((c) => c.id === clientId)?.name || "Desconocido"
+    if (!clientId || !Array.isArray(clients)) return "Desconocido"
+    return clients.find((c) => c?.id === clientId)?.name || "Desconocido"
   }
 
   const getPetRecords = (petId: string) => {
-    return medicalRecords.filter((r) => r.petId === petId)
+    if (!petId || !Array.isArray(medicalRecords)) return []
+    return medicalRecords.filter((r) => r?.petId === petId)
   }
 
   const getPetVaccinations = (petId: string) => {
+    if (!petId || !Array.isArray(medicalRecords)) return []
     return medicalRecords.filter((r) => {
-      if (r.petId !== petId) return false
+      if (!r || r.petId !== petId) return false
       const reason = r.reason?.toLowerCase() || ""
       const treatment = r.treatment?.toLowerCase() || ""
       return reason.includes("vacunación") || reason.includes("vacuna") || treatment.includes("vacuna")
@@ -283,17 +290,28 @@ export default function PetsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredPets.map((pet) => {
-                  const age = new Date().getFullYear() - new Date(pet.birthDate).getFullYear()
-                  return (
+                {filteredPets.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                      {petsLoading ? "Cargando mascotas..." : "No hay mascotas registradas"}
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredPets.map((pet) => {
+                    if (!pet) return null
+                    const birthDate = pet.birthDate ? new Date(pet.birthDate) : null
+                    const age = birthDate && !isNaN(birthDate.getTime()) 
+                      ? new Date().getFullYear() - birthDate.getFullYear()
+                      : 0
+                    return (
                     <TableRow key={pet.id}>
                       <TableCell>
                         <Avatar className="w-12 h-12">
-                          <AvatarImage src={pet.photo} alt={pet.name} />
+                          <AvatarImage src={pet.photo} alt={pet.name || "Mascota"} />
                           <AvatarFallback>
-                            {pet.species.toLowerCase() === "perro" ? (
+                            {pet.species?.toLowerCase() === "perro" ? (
                               <FaDog className="text-primary" />
-                            ) : pet.species.toLowerCase() === "gato" ? (
+                            ) : pet.species?.toLowerCase() === "gato" ? (
                               <FaCat className="text-accent" />
                             ) : (
                               <FaDog className="text-primary" />
@@ -302,18 +320,18 @@ export default function PetsPage() {
                         </Avatar>
                       </TableCell>
                       <TableCell className="font-medium flex items-center gap-2">
-                        {pet.species.toLowerCase() === "perro" ? (
+                        {pet.species?.toLowerCase() === "perro" ? (
                           <FaDog className="text-primary" />
-                        ) : pet.species.toLowerCase() === "gato" ? (
+                        ) : pet.species?.toLowerCase() === "gato" ? (
                           <FaCat className="text-accent" />
                         ) : null}
-                        {pet.name}
+                        {pet.name || "Sin nombre"}
                       </TableCell>
-                      <TableCell>{pet.species}</TableCell>
-                      <TableCell>{pet.breed}</TableCell>
-                      <TableCell>{getClientName(pet.clientId)}</TableCell>
-                      <TableCell>{age} años</TableCell>
-                      <TableCell>{pet.weight} kg</TableCell>
+                      <TableCell>{pet.species || "N/A"}</TableCell>
+                      <TableCell>{pet.breed || "N/A"}</TableCell>
+                      <TableCell>{getClientName(pet.clientId || "")}</TableCell>
+                      <TableCell>{age > 0 ? `${age} años` : "N/A"}</TableCell>
+                      <TableCell>{pet.weight ? `${pet.weight} kg` : "N/A"}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
                           {user?.role !== "cliente" && (
@@ -426,8 +444,9 @@ export default function PetsPage() {
                         </div>
                       </TableCell>
                     </TableRow>
-                  )
-                })}
+                    )
+                  })
+                )}
               </TableBody>
             </Table>
           </div>
