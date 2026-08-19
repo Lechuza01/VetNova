@@ -121,6 +121,7 @@ export default function LoginPage() {
             </div>
           </div>
           <CardTitle className="text-2xl font-bold">VetNova</CardTitle>
+          <p className="text-sm italic text-muted-foreground">Your Pet, our Priority</p>
           <CardDescription>
             {show2FA ? "Ingresa el código de verificación" : "Inicia sesión en tu cuenta"}
           </CardDescription>
